@@ -1,0 +1,3649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Forex Agent Desk — Institutional Trading System</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #070a0e;
+  --surface: #0c1219;
+  --surface2: #111a24;
+  --surface3: #162030;
+  --border: #1a2a3a;
+  --border2: #223344;
+  --c1: #00d4ff;   /* orchestrator / primary accent */
+  --c2: #3de0d0;   /* data engineer */
+  --c3: #f5c842;   /* regime */
+  --c4: #ff6e38;   /* alpha research */
+  --c5: #ff3d57;   /* backtest */
+  --c6: #50fa7b;   /* risk */
+  --c7: #4da6ff;   /* execution */
+  --c8: #b39dff;   /* trade mgmt */
+  --c9: #ff80b0;   /* monitoring */
+  --c10: #d070ff;  /* governance */
+  --c11: #a8e063;  /* reporting */
+  --txt: #b0c8d8;
+  --txt-dim: #3a5570;
+  --txt-bright: #e8f4ff;
+  --warn: #ff6e38;
+  --pass: #50fa7b;
+  --fail: #ff3d57;
+  --block: #ffd166;
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--txt);
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+  line-height: 1.6;
+}
+
+/* Global grid texture */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    linear-gradient(rgba(0,212,255,0.016) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,212,255,0.016) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none; z-index: 0;
+}
+
+/* Scanlines */
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.04) 3px, rgba(0,0,0,0.04) 4px);
+  pointer-events: none; z-index: 0;
+}
+
+/* ═══════════════════════════════════════
+   NAVIGATION
+═══════════════════════════════════════ */
+.nav {
+  position: fixed; top: 0; left: 0; right: 0;
+  z-index: 100;
+  background: rgba(7,10,14,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  height: 56px;
+  display: flex; align-items: center;
+}
+
+.nav-inner {
+  max-width: 1400px; margin: 0 auto;
+  padding: 0 28px;
+  display: flex; align-items: center; gap: 0;
+  width: 100%;
+}
+
+.nav-logo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px; letter-spacing: 3px;
+  color: var(--txt-bright);
+  margin-right: 48px; white-space: nowrap;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.nav-logo span { color: var(--c1); }
+
+.nav-links {
+  display: flex; gap: 0; flex: 1;
+  overflow-x: auto; scrollbar-width: none;
+}
+
+.nav-links::-webkit-scrollbar { display: none; }
+
+.nav-link {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 0 18px; height: 56px;
+  display: flex; align-items: center;
+  color: var(--txt-dim);
+  cursor: pointer;
+  transition: all 0.2s;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  border-top: none; border-left: none; border-right: none;
+  background: none; text-decoration: none;
+}
+
+.nav-link:hover { color: var(--txt); background: rgba(255,255,255,0.03); }
+.nav-link.active { color: var(--c1); border-bottom-color: var(--c1); }
+
+.nav-status {
+  margin-left: auto;
+  display: flex; align-items: center; gap: 8px;
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  color: var(--c6); white-space: nowrap;
+}
+
+.status-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--c6);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* ═══════════════════════════════════════
+   PAGE SYSTEM
+═══════════════════════════════════════ */
+.page {
+  display: none; min-height: 100vh;
+  padding-top: 56px;
+  position: relative; z-index: 1;
+}
+
+.page.active { display: block; }
+
+.page-wrap {
+  max-width: 1280px; margin: 0 auto;
+  padding: 48px 28px 80px;
+}
+
+/* ═══════════════════════════════════════
+   SHARED COMPONENTS
+═══════════════════════════════════════ */
+.section-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; letter-spacing: 4px;
+  text-transform: uppercase; color: var(--txt-dim);
+  display: flex; align-items: center; gap: 16px;
+  margin-bottom: 32px;
+}
+
+.section-label::after {
+  content: ''; flex: 1; height: 1px;
+  background: var(--border);
+}
+
+.badge {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; letter-spacing: 3px;
+  text-transform: uppercase;
+  border: 1px solid rgba(0,212,255,0.3);
+  color: var(--c1); padding: 5px 14px;
+  display: inline-block;
+}
+
+.badge.orange { border-color: rgba(255,110,56,0.3); color: var(--c4); }
+.badge.green { border-color: rgba(80,250,123,0.3); color: var(--c6); }
+.badge.purple { border-color: rgba(208,112,255,0.3); color: var(--c10); }
+
+.metric-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 20px 24px;
+  position: relative; overflow: hidden;
+}
+
+.metric-card::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0; height: 1px;
+}
+
+.metric-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--txt-dim);
+  margin-bottom: 8px;
+}
+
+.metric-value {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 32px; letter-spacing: 2px;
+  color: var(--txt-bright); line-height: 1;
+}
+
+.metric-sub {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px; color: var(--txt-dim);
+  margin-top: 6px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 24px 28px;
+  transition: border-color 0.2s;
+}
+
+.card:hover { border-color: var(--border2); }
+
+.gate-badge {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; letter-spacing: 2px;
+  padding: 6px 14px;
+  display: inline-flex; align-items: center; gap: 8px;
+  margin-top: 12px;
+}
+
+.gate-badge.pass {
+  background: rgba(80,250,123,0.08);
+  border: 1px solid rgba(80,250,123,0.3);
+  color: var(--pass);
+}
+
+.gate-badge.block {
+  background: rgba(255,61,87,0.08);
+  border: 1px solid rgba(255,61,87,0.3);
+  color: var(--fail);
+}
+
+.gate-badge.warn {
+  background: rgba(255,209,102,0.08);
+  border: 1px solid rgba(255,209,102,0.3);
+  color: var(--block);
+}
+
+.status-badge {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px; letter-spacing: 2px;
+  padding: 3px 10px; display: inline-block;
+}
+
+.status-badge.live { background: rgba(80,250,123,0.12); color: var(--pass); border: 1px solid rgba(80,250,123,0.25); }
+.status-badge.paused { background: rgba(255,209,102,0.12); color: var(--block); border: 1px solid rgba(255,209,102,0.25); }
+.status-badge.halted { background: rgba(255,61,87,0.12); color: var(--fail); border: 1px solid rgba(255,61,87,0.25); }
+.status-badge.approved { background: rgba(0,212,255,0.1); color: var(--c1); border: 1px solid rgba(0,212,255,0.25); }
+.status-badge.blocked { background: rgba(255,61,87,0.12); color: var(--fail); border: 1px solid rgba(255,61,87,0.25); }
+.status-badge.testing { background: rgba(245,200,66,0.1); color: var(--c3); border: 1px solid rgba(245,200,66,0.25); }
+
+/* ═══════════════════════════════════════
+   PAGE 0: HOME
+═══════════════════════════════════════ */
+.hero {
+  min-height: calc(100vh - 56px);
+  display: flex; flex-direction: column;
+  justify-content: center; padding: 80px 28px;
+  position: relative; overflow: hidden;
+  max-width: 1280px; margin: 0 auto;
+}
+
+.hero-eyebrow {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; letter-spacing: 5px;
+  color: var(--c1); text-transform: uppercase;
+  margin-bottom: 28px; display: flex; align-items: center; gap: 12px;
+}
+
+.hero-eyebrow::before {
+  content: ''; width: 40px; height: 1px; background: var(--c1);
+}
+
+.hero h1 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(56px, 10vw, 120px);
+  line-height: 0.9; letter-spacing: 4px;
+  color: var(--txt-bright);
+  margin-bottom: 0;
+}
+
+.hero h1 .accent { color: var(--c1); display: block; }
+.hero h1 .dim { color: var(--txt-dim); display: block; }
+
+.hero-thesis {
+  margin-top: 36px;
+  max-width: 640px;
+  font-size: 16px; font-weight: 300;
+  color: var(--txt); line-height: 1.8;
+}
+
+.hero-stats {
+  display: flex; gap: 0;
+  margin-top: 48px;
+  border: 1px solid var(--border);
+  width: fit-content;
+}
+
+.hero-stat {
+  padding: 20px 32px;
+  border-right: 1px solid var(--border);
+  text-align: center;
+}
+
+.hero-stat:last-child { border-right: none; }
+
+.hero-stat-num {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 36px; letter-spacing: 2px;
+  color: var(--c1); line-height: 1;
+}
+
+.hero-stat-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px; letter-spacing: 2px;
+  color: var(--txt-dim); text-transform: uppercase;
+  margin-top: 4px;
+}
+
+.hero-ctas {
+  display: flex; gap: 12px; margin-top: 48px; flex-wrap: wrap;
+}
+
+.cta-primary {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px; letter-spacing: 3px;
+  text-transform: uppercase;
+  padding: 14px 28px;
+  background: var(--c1); color: #000;
+  cursor: pointer; border: none;
+  transition: all 0.2s; font-weight: 500;
+}
+
+.cta-primary:hover { background: #fff; }
+
+.cta-secondary {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px; letter-spacing: 3px;
+  text-transform: uppercase;
+  padding: 14px 28px;
+  background: transparent;
+  border: 1px solid var(--border2); color: var(--txt);
+  cursor: pointer; transition: all 0.2s;
+}
+
+.cta-secondary:hover { border-color: var(--c1); color: var(--c1); }
+
+.loops-overview {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 16px; margin-top: 80px;
+}
+
+.loop-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 28px 32px;
+  position: relative; overflow: hidden;
+  cursor: pointer; transition: all 0.3s;
+}
+
+.loop-card::before {
+  content: ''; position: absolute;
+  left: 0; top: 0; bottom: 0; width: 3px;
+}
+
+.loop-card.research::before { background: var(--c4); }
+.loop-card.trading::before { background: var(--c6); }
+
+.loop-card:hover { background: var(--surface2); transform: translateY(-2px); }
+
+.loop-card-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; letter-spacing: 3px;
+  text-transform: uppercase; margin-bottom: 8px;
+}
+
+.loop-card.research .loop-card-label { color: var(--c4); }
+.loop-card.trading .loop-card-label { color: var(--c6); }
+
+.loop-card-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 24px; letter-spacing: 2px;
+  color: var(--txt-bright); margin-bottom: 12px;
+}
+
+.loop-card-desc {
+  font-size: 13px; color: var(--txt);
+  line-height: 1.7; margin-bottom: 16px;
+}
+
+.loop-agents {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+
+.loop-tag {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px; padding: 3px 8px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border); color: var(--txt-dim);
+}
+
+.preview-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 2px; margin-top: 64px;
+}
+
+.preview-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 24px; cursor: pointer;
+  transition: all 0.2s; position: relative;
+  overflow: hidden;
+}
+
+.preview-card:hover { background: var(--surface2); border-color: var(--border2); }
+
+.preview-card-num {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 48px; letter-spacing: 2px;
+  opacity: 0.06; color: var(--txt-bright);
+  position: absolute; top: 12px; right: 16px;
+  line-height: 1;
+}
+
+.preview-card-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px; letter-spacing: 3px;
+  color: var(--txt-dim); text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.preview-card-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px; letter-spacing: 2px;
+  color: var(--txt-bright); margin-bottom: 8px;
+}
+
+.preview-card-desc {
+  font-size: 12px; color: var(--txt);
+  line-height: 1.6;
+}
+
+.system-truths {
+  margin-top: 80px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 40px;
+}
+
+.truths-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 24px; margin-top: 28px;
+}
+
+.truth-item {
+  padding: 16px 20px;
+  border-left: 2px solid var(--border2);
+}
+
+.truth-item:nth-child(1) { border-color: var(--c1); }
+.truth-item:nth-child(2) { border-color: var(--c4); }
+.truth-item:nth-child(3) { border-color: var(--c6); }
+.truth-item:nth-child(4) { border-color: var(--c5); }
+.truth-item:nth-child(5) { border-color: var(--c10); }
+.truth-item:nth-child(6) { border-color: var(--c9); }
+
+.truth-text {
+  font-size: 13px; color: var(--txt); line-height: 1.6;
+}
+
+/* ═══════════════════════════════════════
+   PAGE 1: AGENT DESK
+═══════════════════════════════════════ */
+.page-hero {
+  padding: 60px 0 48px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 48px;
+}
+
+.page-hero-badge {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; letter-spacing: 4px;
+  color: var(--c1); text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+.page-hero h2 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(40px, 6vw, 72px);
+  letter-spacing: 4px; line-height: 0.95;
+  color: var(--txt-bright);
+}
+
+.page-hero p {
+  font-size: 15px; color: var(--txt);
+  max-width: 600px; margin-top: 16px; font-weight: 300;
+}
+
+.loops-summary {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 16px; margin-bottom: 48px;
+}
+
+.loop-summary-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 20px 24px;
+  position: relative; overflow: hidden;
+}
+
+.loop-summary-card::before {
+  content: ''; position: absolute;
+  left: 0; top: 0; bottom: 0; width: 3px;
+}
+
+.loop-summary-card.research::before { background: var(--c4); }
+.loop-summary-card.trading::before { background: var(--c6); }
+
+.loop-summary-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; letter-spacing: 3px;
+  text-transform: uppercase; margin-bottom: 6px;
+}
+
+.loop-summary-card.research .loop-summary-label { color: var(--c4); }
+.loop-summary-card.trading .loop-summary-label { color: var(--c6); }
+
+.loop-summary-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px; letter-spacing: 2px;
+  color: var(--txt-bright); margin-bottom: 10px;
+}
+
+.agents-grid {
+  display: flex; flex-direction: column; gap: 2px;
+}
+
+/* Agent cards */
+.agent-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: none;
+  position: relative; overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.agent-card:hover { background: var(--surface2); border-color: rgba(0,212,255,0.15); transform: translateX(3px); }
+
+.agent-card::before {
+  content: ''; position: absolute;
+  left: 0; top: 0; bottom: 0; width: 4px;
+  transition: all 0.3s;
+}
+
+.agent-card[data-id="0"]::before { background: var(--c1); }
+.agent-card[data-id="1"]::before { background: var(--c2); }
+.agent-card[data-id="2"]::before { background: var(--c3); }
+.agent-card[data-id="3"]::before { background: var(--c4); }
+.agent-card[data-id="4"]::before { background: var(--c5); }
+.agent-card[data-id="5"]::before { background: var(--c6); }
+.agent-card[data-id="6"]::before { background: var(--c7); }
+.agent-card[data-id="7"]::before { background: var(--c8); }
+.agent-card[data-id="8"]::before { background: var(--c9); }
+.agent-card[data-id="9"]::before { background: var(--c10); }
+.agent-card[data-id="10"]::before { background: var(--c11); }
+
+.agent-header {
+  display: grid;
+  grid-template-columns: 72px 1fr auto;
+  align-items: center;
+  gap: 24px; padding: 22px 28px;
+  cursor: pointer;
+}
+
+.agent-number {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 40px; letter-spacing: 2px;
+  opacity: 0.1; color: var(--txt-bright);
+  line-height: 1; transition: opacity 0.3s;
+}
+
+.agent-card:hover .agent-number { opacity: 0.2; }
+
+.agent-role {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px; letter-spacing: 3px;
+  text-transform: uppercase; margin-bottom: 4px; opacity: 0.6;
+}
+
+.agent-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 26px; letter-spacing: 2px;
+  color: var(--txt-bright); line-height: 1; margin-bottom: 6px;
+}
+
+.agent-tagline {
+  font-size: 12px; color: var(--txt-dim); font-style: italic;
+}
+
+.agent-toggle {
+  font-family: 'DM Mono', monospace;
+  font-size: 18px; color: var(--txt-dim);
+  padding: 0 8px;
+  transition: transform 0.3s ease, color 0.3s;
+  user-select: none;
+}
+
+.agent-card.open .agent-toggle { transform: rotate(45deg); color: var(--c1); }
+
+.agent-body {
+  max-height: 0; overflow: hidden;
+  transition: max-height 0.55s cubic-bezier(0.4,0,0.2,1);
+}
+
+.agent-card.open .agent-body { max-height: 1600px; }
+
+.agent-body-inner {
+  padding: 28px 28px 32px 28px;
+  border-top: 1px solid var(--border);
+}
+
+.goal-block {
+  background: rgba(0,212,255,0.03);
+  border: 1px solid rgba(0,212,255,0.1);
+  padding: 18px 20px; margin-bottom: 24px;
+}
+
+.goal-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px; letter-spacing: 3px;
+  text-transform: uppercase; color: var(--c1); margin-bottom: 10px;
+}
+
+.goal-text {
+  font-size: 14px; color: var(--txt-bright);
+  line-height: 1.75; font-weight: 300;
+}
+
+.detail-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 20px; margin-bottom: 24px;
+}
+
+.detail-block {
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--border);
+  padding: 16px 18px;
+}
+
+.detail-block-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px; letter-spacing: 3px;
+  text-transform: uppercase; color: var(--txt-dim);
+  margin-bottom: 10px;
+  display: flex; align-items: center; gap: 8px;
+}
+
+.detail-block-label::before {
+  content: ''; display: inline-block;
+  width: 5px; height: 5px; border-radius: 50%;
+}
+
+.db-inputs .detail-block-label::before { background: var(--c3); }
+.db-actions .detail-block-label::before { background: var(--c4); }
+.db-outputs .detail-block-label::before { background: var(--c6); }
+.db-tools .detail-block-label::before { background: var(--c10); }
+
+.detail-list {
+  list-style: none;
+  display: flex; flex-direction: column; gap: 6px;
+}
+
+.detail-list li {
+  font-size: 12.5px; color: var(--txt);
+  padding-left: 14px; position: relative; line-height: 1.5;
+}
+
+.detail-list li::before {
+  content: '→'; position: absolute; left: 0;
+  font-size: 10px; color: var(--txt-dim); top: 2px;
+}
+
+.code-block-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px; letter-spacing: 3px;
+  text-transform: uppercase; color: var(--txt-dim);
+  margin-bottom: 12px;
+}
+
+.code-block {
+  background: #040608;
+  border: 1px solid var(--border);
+  padding: 18px 20px;
+  font-family: 'DM Mono', monospace;
+  font-size: 11.5px; line-height: 1.8;
+  overflow-x: auto; margin-bottom: 20px;
+}
+
+.code-comment { color: #2a4555; }
+.code-keyword { color: var(--c10); }
+.code-string { color: var(--c6); }
+.code-param { color: var(--c3); }
+.code-class { color: var(--c1); }
+.code-value { color: var(--c4); }
+
+.agent-warning {
+  display: flex; gap: 12px; align-items: flex-start;
+  background: rgba(255,110,56,0.06);
+  border: 1px solid rgba(255,110,56,0.2);
+  padding: 14px 16px;
+}
+
+.agent-warning-icon { font-size: 13px; margin-top: 1px; flex-shrink: 0; }
+.agent-warning-text {
+  font-size: 12px; color: rgba(255,110,56,0.9);
+  line-height: 1.65; font-family: 'DM Mono', monospace;
+}
+
+.tags-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+
+.tag {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px; padding: 3px 9px;
+  border: 1px solid var(--border); color: var(--txt-dim); letter-spacing: 1px;
+}
+
+/* Build order */
+.build-order-section {
+  margin-top: 64px; padding-top: 48px;
+  border-top: 1px solid var(--border);
+}
+
+.build-steps {
+  display: flex; flex-wrap: wrap; gap: 0; margin-top: 24px;
+}
+
+.build-step {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 12px 20px;
+  display: flex; align-items: center; gap: 10px;
+  font-family: 'DM Mono', monospace; font-size: 11px;
+}
+
+.build-step-num {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px; color: var(--c1); line-height: 1;
+}
+
+.build-step-name { color: var(--txt); letter-spacing: 1px; }
+
+/* ═══════════════════════════════════════
+   PAGE 2: WORKFLOW
+═══════════════════════════════════════ */
+.workflow-layout {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 24px; align-items: start;
+}
+
+.topology-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 32px;
+  position: relative;
+}
+
+.topology-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; letter-spacing: 3px;
+  text-transform: uppercase; color: var(--txt-dim);
+  margin-bottom: 32px;
+}
+
+/* SVG topology diagram */
+.topo-svg { width: 100%; height: 440px; display: block; }
+
+.agent-node {
+  cursor: pointer; transition: all 0.2s;
+}
+
+.agent-node:hover .node-circle,
+.agent-node.highlighted .node-circle {
+  stroke-width: 2;
+  filter: drop-shadow(0 0 8px currentColor);
+}
+
+.node-circle { transition: all 0.25s; fill: rgba(0,0,0,0.5); }
+.node-label { font-family: 'DM Mono', monospace; font-size: 8.5px; fill: #8ab; }
+.node-label-top { font-family: 'DM Mono', monospace; font-size: 7px; fill: #4a7090; text-transform: uppercase; }
+.orch-ring { fill: none; stroke: rgba(0,212,255,0.12); }
+.connect-line { stroke-dasharray: 4 4; opacity: 0.3; }
+
+/* Scenario selector */
+.scenario-btns {
+  display: flex; gap: 2px; margin-bottom: 32px; flex-wrap: wrap;
+}
+
+.scenario-btn {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 9px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--txt-dim); cursor: pointer;
+  transition: all 0.2s;
+}
+
+.scenario-btn:hover { color: var(--txt); background: var(--surface2); }
+.scenario-btn.active-research { color: var(--c4); border-color: var(--c4); background: rgba(255,110,56,0.06); }
+.scenario-btn.active-trading { color: var(--c6); border-color: var(--c6); background: rgba(80,250,123,0.06); }
+.scenario-btn.active-risk { color: var(--fail); border-color: var(--fail); background: rgba(255,61,87,0.06); }
+.scenario-btn.active-full { color: var(--c1); border-color: var(--c1); background: rgba(0,212,255,0.06); }
+
+.seq-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px; letter-spacing: 2px;
+  color: var(--txt-bright); margin-bottom: 24px;
+}
+
+.seq-steps { display: flex; flex-direction: column; gap: 0; }
+
+.seq-step {
+  display: flex; gap: 0;
+  opacity: 0; animation: stepIn 0.3s ease forwards;
+}
+
+@keyframes stepIn {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.seq-step:nth-child(1) { animation-delay: 0.05s; }
+.seq-step:nth-child(2) { animation-delay: 0.1s; }
+.seq-step:nth-child(3) { animation-delay: 0.15s; }
+.seq-step:nth-child(4) { animation-delay: 0.2s; }
+.seq-step:nth-child(5) { animation-delay: 0.25s; }
+.seq-step:nth-child(6) { animation-delay: 0.3s; }
+.seq-step:nth-child(7) { animation-delay: 0.35s; }
+
+.seq-step-num-col {
+  display: flex; flex-direction: column;
+  align-items: center; width: 40px; flex-shrink: 0;
+}
+
+.seq-step-num {
+  width: 28px; height: 28px;
+  border: 1px solid; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  flex-shrink: 0; background: var(--surface);
+}
+
+.seq-vline {
+  flex: 1; width: 1px;
+  background: var(--border);
+  min-height: 20px;
+}
+
+.seq-step:last-child .seq-vline { display: none; }
+
+.seq-content {
+  flex: 1; padding: 0 0 24px 16px;
+}
+
+.seq-step-agent {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; letter-spacing: 2px;
+  text-transform: uppercase; margin-bottom: 4px;
+}
+
+.seq-step-action {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 18px; letter-spacing: 1px;
+  color: var(--txt-bright); margin-bottom: 8px;
+}
+
+.seq-step-desc {
+  font-size: 12.5px; color: var(--txt);
+  line-height: 1.65; margin-bottom: 10px;
+}
+
+.seq-step-passes {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; color: var(--txt-dim);
+  display: flex; gap: 8px; flex-wrap: wrap;
+  align-items: center;
+}
+
+.seq-step-passes span:first-child {
+  border: 1px solid;
+  padding: 2px 8px;
+}
+
+/* Side detail panel */
+.side-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 28px; position: sticky; top: 72px;
+}
+
+.side-panel-placeholder {
+  text-align: center; padding: 40px 20px;
+  color: var(--txt-dim);
+  font-family: 'DM Mono', monospace; font-size: 11px;
+  line-height: 1.8;
+}
+
+.detail-agent-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 24px; letter-spacing: 2px;
+  color: var(--txt-bright); margin-bottom: 4px;
+}
+
+.detail-agent-role {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; letter-spacing: 2px; margin-bottom: 20px;
+}
+
+.detail-section { margin-bottom: 20px; }
+
+.detail-section-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px; letter-spacing: 3px;
+  text-transform: uppercase; color: var(--txt-dim);
+  margin-bottom: 10px;
+}
+
+.detail-item {
+  font-size: 12px; color: var(--txt);
+  padding: 6px 10px; margin-bottom: 4px;
+  background: rgba(255,255,255,0.025);
+  border-left: 2px solid var(--border2);
+}
+
+.ws-row {
+  display: flex; gap: 10px; align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.ws-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  margin-top: 5px; flex-shrink: 0;
+}
+
+.ws-text { font-size: 12px; color: var(--txt); line-height: 1.5; }
+
+/* ═══════════════════════════════════════
+   PAGE 3: STRATEGY LAB
+═══════════════════════════════════════ */
+.strategy-metrics {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 2px; margin-bottom: 48px;
+}
+
+.funnel-section {
+  background: var(--surface); border: 1px solid var(--border);
+  padding: 32px; margin-bottom: 24px;
+}
+
+.funnel-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; letter-spacing: 3px;
+  color: var(--txt-dim); text-transform: uppercase; margin-bottom: 24px;
+}
+
+.funnel-stages {
+  display: flex; flex-direction: column; gap: 2px;
+}
+
+.funnel-stage {
+  display: flex; align-items: center; gap: 0;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.funnel-bar {
+  height: 52px; min-width: 8px;
+  display: flex; align-items: center;
+  padding: 0 20px;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px; letter-spacing: 2px;
+  color: #000; white-space: nowrap;
+  transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+}
+
+.funnel-info {
+  flex: 1; padding: 14px 20px;
+  display: flex; align-items: center; gap: 16px;
+}
+
+.funnel-stage-name {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--txt-bright);
+  min-width: 200px;
+}
+
+.funnel-stage-desc {
+  font-size: 12px; color: var(--txt); flex: 1;
+}
+
+.strategies-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr);
+  gap: 16px; margin-top: 32px;
+}
+
+.strategy-card {
+  background: var(--surface); border: 1px solid var(--border);
+  padding: 24px; position: relative; overflow: hidden;
+}
+
+.strategy-card::before {
+  content: ''; position: absolute;
+  top: 0; left: 0; right: 0; height: 3px;
+}
+
+.strategy-card.pass::before { background: var(--pass); }
+.strategy-card.fail::before { background: var(--fail); }
+.strategy-card.testing::before { background: var(--c3); }
+.strategy-card.blocked::before { background: var(--warn); }
+
+.strategy-card-header {
+  display: flex; justify-content: space-between;
+  align-items: flex-start; margin-bottom: 12px;
+}
+
+.strategy-id {
+  font-family: 'DM Mono', monospace; font-size: 9px;
+  letter-spacing: 2px; color: var(--txt-dim);
+}
+
+.strategy-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px; letter-spacing: 2px;
+  color: var(--txt-bright); margin-bottom: 4px;
+}
+
+.strategy-pair {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px; color: var(--c1);
+}
+
+.strategy-metrics-row {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 10px; margin-top: 16px; margin-bottom: 12px;
+}
+
+.strategy-metric {
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+}
+
+.strategy-metric-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px; letter-spacing: 2px;
+  color: var(--txt-dim); margin-bottom: 4px;
+}
+
+.strategy-metric-val {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 18px; letter-spacing: 1px;
+}
+
+/* ═══════════════════════════════════════
+   PAGE 4: RISK COMMAND CENTER
+═══════════════════════════════════════ */
+.risk-status-bar {
+  display: flex; align-items: center; gap: 16px;
+  background: rgba(80,250,123,0.08);
+  border: 1px solid rgba(80,250,123,0.25);
+  padding: 16px 24px; margin-bottom: 32px;
+}
+
+.risk-status-bar.warning {
+  background: rgba(255,209,102,0.08);
+  border-color: rgba(255,209,102,0.25);
+}
+
+.risk-status-bar.halt {
+  background: rgba(255,61,87,0.08);
+  border-color: rgba(255,61,87,0.25);
+}
+
+.risk-status-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--pass); animation: pulse 2s infinite;
+  flex-shrink: 0;
+}
+
+.risk-status-bar.warning .risk-status-dot { background: var(--block); }
+.risk-status-bar.halt .risk-status-dot { background: var(--fail); animation: none; }
+
+.risk-status-text {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px; letter-spacing: 2px; color: var(--pass);
+}
+
+.risk-status-bar.warning .risk-status-text { color: var(--block); }
+.risk-status-bar.halt .risk-status-text { color: var(--fail); }
+
+.risk-metrics {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 2px; margin-bottom: 32px;
+}
+
+.risk-gauge-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr);
+  gap: 16px; margin-bottom: 32px;
+}
+
+.risk-gauge-card {
+  background: var(--surface); border: 1px solid var(--border);
+  padding: 24px;
+}
+
+.gauge-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px; letter-spacing: 3px;
+  text-transform: uppercase; color: var(--txt-dim); margin-bottom: 16px;
+}
+
+.gauge-bar-track {
+  height: 6px; background: rgba(255,255,255,0.06);
+  border-radius: 3px; overflow: hidden; margin-bottom: 10px;
+}
+
+.gauge-bar-fill {
+  height: 100%; border-radius: 3px;
+  transition: width 1s ease;
+}
+
+.gauge-val {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 28px; letter-spacing: 2px; color: var(--txt-bright);
+  display: flex; align-items: baseline; gap: 8px;
+}
+
+.gauge-unit {
+  font-size: 14px; color: var(--txt-dim);
+  font-family: 'DM Mono', monospace; letter-spacing: 2px;
+}
+
+.risk-rules {
+  background: var(--surface); border: 1px solid var(--border);
+  padding: 28px; margin-top: 24px;
+}
+
+.risk-rules-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 16px; margin-top: 20px;
+}
+
+.risk-rule {
+  padding: 16px; background: rgba(0,0,0,0.3);
+  border: 1px solid var(--border);
+}
+
+.risk-rule-type {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px; letter-spacing: 2px;
+  text-transform: uppercase; margin-bottom: 8px;
+}
+
+.risk-rule-type.hard { color: var(--fail); }
+.risk-rule-type.soft { color: var(--block); }
+.risk-rule-type.passive { color: var(--c7); }
+
+.risk-rule-text {
+  font-size: 12.5px; color: var(--txt); line-height: 1.6;
+}
+
+/* ═══════════════════════════════════════
+   PAGE 5: EXECUTION CONSOLE
+═══════════════════════════════════════ */
+.exec-header-row {
+  display: flex; align-items: center; gap: 16px;
+  margin-bottom: 32px; flex-wrap: wrap;
+}
+
+.exec-live-feed {
+  flex: 1;
+  background: rgba(0,0,0,0.4); border: 1px solid var(--border);
+  padding: 16px 20px; font-family: 'DM Mono', monospace;
+  font-size: 11px; min-height: 80px;
+  position: relative; overflow: hidden;
+}
+
+.exec-feed-line {
+  color: var(--txt-dim); margin-bottom: 4px;
+  display: flex; gap: 16px; align-items: center;
+}
+
+.exec-feed-time { color: var(--txt-dim); white-space: nowrap; }
+.exec-feed-agent { color: var(--c1); min-width: 130px; }
+.exec-feed-msg { color: var(--txt); flex: 1; }
+.exec-feed-status { margin-left: auto; white-space: nowrap; }
+
+.orders-table {
+  width: 100%;
+  background: var(--surface); border: 1px solid var(--border);
+  border-collapse: collapse; margin-bottom: 24px;
+}
+
+.orders-table th {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--txt-dim);
+  padding: 12px 16px; text-align: left;
+  border-bottom: 1px solid var(--border);
+  background: rgba(0,0,0,0.3);
+}
+
+.orders-table td {
+  padding: 12px 16px; font-size: 13px;
+  border-bottom: 1px solid var(--border);
+  font-family: 'DM Mono', monospace;
+}
+
+.orders-table tr:hover td { background: var(--surface2); }
+
+.order-id { color: var(--txt-dim); }
+.order-pair { color: var(--txt-bright); font-weight: 500; }
+.order-side-buy { color: var(--c6); }
+.order-side-sell { color: var(--fail); }
+
+.slippage-pos { color: var(--fail); }
+.slippage-neg { color: var(--c6); }
+
+.order-lifecycle {
+  background: var(--surface); border: 1px solid var(--border);
+  padding: 28px; margin-top: 24px;
+}
+
+.lifecycle-flow {
+  display: flex; align-items: center; gap: 0;
+  margin-top: 20px; flex-wrap: wrap;
+}
+
+.lifecycle-step {
+  background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+  padding: 12px 16px; font-family: 'DM Mono', monospace;
+  font-size: 10px; letter-spacing: 1px;
+  color: var(--txt); position: relative;
+}
+
+.lifecycle-step.active {
+  border-color: var(--c1); color: var(--c1);
+  background: rgba(0,212,255,0.06);
+}
+
+.lifecycle-arrow {
+  font-size: 14px; color: var(--txt-dim);
+  padding: 0 8px;
+}
+
+/* ═══════════════════════════════════════
+   PAGE 6: MONITORING
+═══════════════════════════════════════ */
+.health-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 2px; margin-bottom: 32px;
+}
+
+.health-card {
+  background: var(--surface); border: 1px solid var(--border);
+  padding: 20px; position: relative;
+}
+
+.health-card::before {
+  content: ''; position: absolute;
+  top: 0; left: 0; right: 0; height: 3px;
+}
+
+.health-card.ok::before { background: var(--pass); }
+.health-card.warn::before { background: var(--block); }
+.health-card.error::before { background: var(--fail); }
+
+.health-icon { font-size: 20px; margin-bottom: 10px; }
+.health-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; letter-spacing: 2px;
+  color: var(--txt-dim); margin-bottom: 6px; text-transform: uppercase;
+}
+
+.health-value {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px; letter-spacing: 2px; color: var(--txt-bright);
+}
+
+.health-sub { font-size: 11px; color: var(--txt-dim); margin-top: 4px; }
+
+.incident-timeline {
+  background: var(--surface); border: 1px solid var(--border);
+  padding: 28px;
+}
+
+.incident-entry {
+  display: grid; grid-template-columns: 120px 16px 1fr;
+  gap: 16px; margin-bottom: 20px;
+  align-items: flex-start;
+}
+
+.incident-time {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; color: var(--txt-dim); text-align: right; padding-top: 2px;
+}
+
+.incident-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  margin-top: 4px; flex-shrink: 0;
+  margin-left: 4px;
+}
+
+.incident-body {}
+
+.incident-type {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px; letter-spacing: 2px;
+  text-transform: uppercase; margin-bottom: 4px;
+}
+
+.incident-msg { font-size: 13px; color: var(--txt-bright); margin-bottom: 4px; }
+.incident-detail { font-size: 12px; color: var(--txt); }
+
+.incident-entry.severity-1 .incident-dot { background: var(--pass); }
+.incident-entry.severity-2 .incident-dot { background: var(--block); }
+.incident-entry.severity-3 .incident-dot { background: var(--fail); }
+.incident-entry.severity-1 .incident-type { color: var(--pass); }
+.incident-entry.severity-2 .incident-type { color: var(--block); }
+.incident-entry.severity-3 .incident-type { color: var(--fail); }
+
+/* ═══════════════════════════════════════
+   PAGE 7: PERFORMANCE
+═══════════════════════════════════════ */
+.perf-metrics {
+  display: grid; grid-template-columns: repeat(5, 1fr);
+  gap: 2px; margin-bottom: 32px;
+}
+
+.equity-chart-container {
+  background: var(--surface); border: 1px solid var(--border);
+  padding: 28px; margin-bottom: 24px;
+}
+
+.chart-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; letter-spacing: 3px;
+  text-transform: uppercase; color: var(--txt-dim); margin-bottom: 20px;
+}
+
+.equity-chart {
+  width: 100%; height: 200px; position: relative;
+  border-bottom: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+}
+
+.chart-labels-y {
+  position: absolute; left: -40px; top: 0; bottom: 0;
+  display: flex; flex-direction: column; justify-content: space-between;
+  font-family: 'DM Mono', monospace; font-size: 9px; color: var(--txt-dim);
+}
+
+.chart-labels-x {
+  display: flex; justify-content: space-between;
+  margin-top: 8px;
+  font-family: 'DM Mono', monospace; font-size: 9px; color: var(--txt-dim);
+  padding: 0 4px;
+}
+
+.perf-breakdown {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 16px; margin-top: 24px;
+}
+
+.breakdown-card {
+  background: var(--surface); border: 1px solid var(--border);
+  padding: 24px;
+}
+
+.breakdown-title {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  letter-spacing: 3px; text-transform: uppercase;
+  color: var(--txt-dim); margin-bottom: 16px;
+}
+
+.breakdown-row {
+  display: flex; justify-content: space-between;
+  align-items: center; padding: 8px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.breakdown-row:last-child { border-bottom: none; }
+
+.breakdown-name { font-size: 12.5px; color: var(--txt); }
+.breakdown-val { font-family: 'DM Mono', monospace; font-size: 12px; }
+.breakdown-val.pos { color: var(--pass); }
+.breakdown-val.neg { color: var(--fail); }
+.breakdown-val.neutral { color: var(--txt-bright); }
+
+/* ═══════════════════════════════════════
+   PAGE 8: GOVERNANCE
+═══════════════════════════════════════ */
+.gov-principle {
+  background: rgba(208,112,255,0.05);
+  border: 1px solid rgba(208,112,255,0.2);
+  padding: 20px 24px; margin-bottom: 24px;
+  display: flex; gap: 16px; align-items: flex-start;
+}
+
+.gov-principle-icon { font-size: 18px; flex-shrink: 0; }
+.gov-principle-text { font-size: 14px; color: var(--txt-bright); line-height: 1.7; }
+.gov-principle-label {
+  font-family: 'DM Mono', monospace; font-size: 9px;
+  letter-spacing: 3px; text-transform: uppercase;
+  color: var(--c10); margin-bottom: 6px;
+}
+
+.gov-releases {
+  background: var(--surface); border: 1px solid var(--border);
+  padding: 0; overflow: hidden;
+}
+
+.gov-release {
+  display: grid; grid-template-columns: 120px 120px 1fr 120px;
+  gap: 0; border-bottom: 1px solid var(--border);
+  align-items: center;
+}
+
+.gov-release:last-child { border-bottom: none; }
+
+.gov-release.header { background: rgba(0,0,0,0.3); }
+
+.gov-release > div {
+  padding: 14px 20px;
+  font-size: 12.5px; color: var(--txt);
+  border-right: 1px solid var(--border);
+}
+
+.gov-release > div:last-child { border-right: none; }
+.gov-release.header > div {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--txt-dim);
+}
+
+.gov-version { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--c1); }
+.gov-hash { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--txt-dim); }
+
+.audit-trail {
+  margin-top: 24px;
+  background: #040608; border: 1px solid var(--border);
+  padding: 20px; font-family: 'DM Mono', monospace; font-size: 11px;
+}
+
+.audit-line {
+  color: var(--txt-dim); margin-bottom: 6px;
+  display: flex; gap: 16px;
+}
+
+.audit-ts { color: #2a4555; white-space: nowrap; }
+.audit-actor { color: var(--c10); }
+.audit-action { color: var(--txt); flex: 1; }
+.audit-hash { color: #1a3545; }
+
+/* ═══════════════════════════════════════
+   PAGE 9: DOCS
+═══════════════════════════════════════ */
+.docs-layout {
+  display: grid; grid-template-columns: 240px 1fr;
+  gap: 32px; align-items: start;
+}
+
+.docs-nav {
+  position: sticky; top: 72px;
+  background: var(--surface); border: 1px solid var(--border);
+  padding: 0; overflow: hidden;
+}
+
+.docs-nav-title {
+  font-family: 'DM Mono', monospace; font-size: 9px;
+  letter-spacing: 3px; text-transform: uppercase;
+  color: var(--txt-dim); padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.docs-nav-link {
+  display: block; padding: 10px 20px;
+  font-family: 'DM Mono', monospace; font-size: 11px;
+  color: var(--txt-dim); cursor: pointer;
+  transition: all 0.2s; border-left: 2px solid transparent;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  text-decoration: none;
+}
+
+.docs-nav-link:hover { color: var(--txt); background: var(--surface2); }
+.docs-nav-link.active { color: var(--c1); border-left-color: var(--c1); background: rgba(0,212,255,0.04); }
+
+.docs-content { }
+
+.doc-section {
+  margin-bottom: 48px; padding-bottom: 48px;
+  border-bottom: 1px solid var(--border);
+}
+
+.doc-section:last-child { border-bottom: none; }
+
+.doc-section h3 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 28px; letter-spacing: 3px;
+  color: var(--txt-bright); margin-bottom: 16px;
+}
+
+.doc-section p {
+  font-size: 14px; color: var(--txt);
+  line-height: 1.8; margin-bottom: 14px;
+}
+
+.doc-section p strong { color: var(--txt-bright); font-weight: 600; }
+
+.glossary-grid {
+  display: flex; flex-direction: column; gap: 0;
+  background: var(--surface); border: 1px solid var(--border);
+}
+
+.glossary-term {
+  display: grid; grid-template-columns: 200px 1fr;
+  border-bottom: 1px solid var(--border);
+}
+
+.glossary-term:last-child { border-bottom: none; }
+
+.glossary-term > div {
+  padding: 14px 20px;
+}
+
+.glossary-term > div:first-child {
+  font-family: 'DM Mono', monospace; font-size: 11px;
+  color: var(--c1); border-right: 1px solid var(--border);
+  background: rgba(0,0,0,0.2);
+}
+
+.glossary-term > div:last-child {
+  font-size: 13px; color: var(--txt); line-height: 1.6;
+}
+
+.doc-highlight {
+  background: rgba(0,212,255,0.04);
+  border: 1px solid rgba(0,212,255,0.12);
+  padding: 16px 20px; margin: 16px 0;
+  font-size: 13.5px; color: var(--txt-bright); line-height: 1.7;
+}
+
+.faq-item { margin-bottom: 20px; }
+
+.faq-q {
+  font-family: 'DM Mono', monospace; font-size: 11px;
+  letter-spacing: 1px; color: var(--c3);
+  margin-bottom: 8px; display: flex; gap: 10px;
+}
+
+.faq-q::before {
+  content: 'Q:'; color: var(--txt-dim); flex-shrink: 0;
+}
+
+.faq-a {
+  font-size: 13px; color: var(--txt); line-height: 1.7;
+  padding-left: 24px;
+}
+
+/* ═══════════════════════════════════════
+   ANIMATIONS
+═══════════════════════════════════════ */
+@keyframes fadeIn {
+  from { opacity: 0; } to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-in { animation: fadeIn 0.35s ease; }
+
+/* ═══════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════ */
+@media (max-width: 1024px) {
+  .workflow-layout { grid-template-columns: 1fr; }
+  .side-panel { position: static; }
+  .docs-layout { grid-template-columns: 1fr; }
+  .docs-nav { position: static; }
+  .perf-metrics { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 768px) {
+  .preview-grid { grid-template-columns: 1fr; }
+  .loops-overview { grid-template-columns: 1fr; }
+  .detail-grid { grid-template-columns: 1fr; }
+  .strategy-metrics { grid-template-columns: repeat(2, 1fr); }
+  .risk-metrics { grid-template-columns: repeat(2, 1fr); }
+  .health-grid { grid-template-columns: repeat(2, 1fr); }
+  .truths-grid { grid-template-columns: 1fr; }
+  .strategies-grid { grid-template-columns: 1fr; }
+  .risk-gauge-grid { grid-template-columns: 1fr; }
+  .risk-rules-grid { grid-template-columns: 1fr; }
+  .perf-breakdown { grid-template-columns: 1fr; }
+  .perf-metrics { grid-template-columns: repeat(2, 1fr); }
+  .agent-header { grid-template-columns: 52px 1fr auto; gap: 12px; }
+  .gov-release { grid-template-columns: 1fr 1fr; }
+  .loops-summary { grid-template-columns: 1fr; }
+  .nav-logo { margin-right: 16px; }
+  .hero-stats { flex-direction: column; border: none; gap: 0; }
+  .hero-stat { border: 1px solid var(--border); margin-bottom: 2px; }
+  .page-wrap { padding: 32px 16px 60px; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAVIGATION -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-logo" onclick="showPage('home')">FOREX<span>AI</span> DESK</a>
+    <div class="nav-links">
+      <a class="nav-link active" data-page="home" onclick="showPage('home')">Overview</a>
+      <a class="nav-link" data-page="agents" onclick="showPage('agents')">Agent Desk</a>
+      <a class="nav-link" data-page="workflow" onclick="showPage('workflow')">Workflow</a>
+      <a class="nav-link" data-page="strategy" onclick="showPage('strategy')">Strategy Lab</a>
+      <a class="nav-link" data-page="risk" onclick="showPage('risk')">Risk Center</a>
+      <a class="nav-link" data-page="execution" onclick="showPage('execution')">Execution</a>
+      <a class="nav-link" data-page="monitoring" onclick="showPage('monitoring')">Monitoring</a>
+      <a class="nav-link" data-page="performance" onclick="showPage('performance')">Performance</a>
+      <a class="nav-link" data-page="governance" onclick="showPage('governance')">Governance</a>
+      <a class="nav-link" data-page="docs" onclick="showPage('docs')">Docs</a>
+    </div>
+    <div class="nav-status">
+      <div class="status-dot"></div>
+      SYSTEM LIVE
+    </div>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════
+     PAGE: HOME
+═══════════════════════════════════ -->
+<div class="page active" id="page-home">
+  <div class="hero">
+    <div class="hero-eyebrow">CrewAI Architecture · Institutional Grade</div>
+    <h1>
+      AI FOREX
+      <span class="accent">AGENT DESK</span>
+      <span class="dim">SYSTEM v1.0</span>
+    </h1>
+    <p class="hero-thesis">
+      A disciplined multi-agent trading system built on the principle that edge must be earned, validated, and defended — not assumed. Every trade requires sign-off from Research, Risk, and Governance before a single lot is placed.
+    </p>
+
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="hero-stat-num">11</div>
+        <div class="hero-stat-label">Specialized Agents</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">2</div>
+        <div class="hero-stat-label">Operating Loops</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">4</div>
+        <div class="hero-stat-label">Safety Gates</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">1</div>
+        <div class="hero-stat-label">Unified System</div>
+      </div>
+    </div>
+
+    <div class="hero-ctas">
+      <button class="cta-primary" onclick="showPage('agents')">Explore Agents</button>
+      <button class="cta-secondary" onclick="showPage('workflow')">View Workflow</button>
+      <button class="cta-secondary" onclick="showPage('docs')">Read Docs</button>
+    </div>
+  </div>
+
+  <div style="max-width:1280px; margin:0 auto; padding: 0 28px 80px;">
+    <div class="section-label">Operating Architecture</div>
+
+    <div class="loops-overview">
+      <div class="loop-card research" onclick="showPage('agents')">
+        <div class="loop-card-label">Loop A — Research</div>
+        <div class="loop-card-title">Build the Edge</div>
+        <div class="loop-card-desc">Systematically discovers, tests, and validates trading strategies. 90–99% of ideas fail here by design. Only proven strategies pass to the trading loop.</div>
+        <div class="loop-agents">
+          <span class="loop-tag">Data Engineer</span>
+          <span class="loop-tag">Alpha Research</span>
+          <span class="loop-tag">Backtest &amp; Validation</span>
+          <span class="loop-tag">Risk Manager</span>
+          <span class="loop-tag">Governance</span>
+        </div>
+      </div>
+      <div class="loop-card trading" onclick="showPage('workflow')">
+        <div class="loop-card-label">Loop B — Trading</div>
+        <div class="loop-card-title">Operate the Edge</div>
+        <div class="loop-card-desc">Executes only pre-approved strategies within defined risk envelopes. Every trade is monitored in real-time with a kill-switch ready at all times.</div>
+        <div class="loop-agents">
+          <span class="loop-tag">Orchestrator</span>
+          <span class="loop-tag">Regime Agent</span>
+          <span class="loop-tag">Execution Agent</span>
+          <span class="loop-tag">Trade Management</span>
+          <span class="loop-tag">Monitoring</span>
+          <span class="loop-tag">Reporting</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label" style="margin-top:64px;">System Pages</div>
+    <div class="preview-grid">
+      <div class="preview-card" onclick="showPage('agents')">
+        <div class="preview-card-num">01</div>
+        <div class="preview-card-label">Blueprint</div>
+        <div class="preview-card-title">Agent Desk</div>
+        <div class="preview-card-desc">All 11 agents with full role definitions, inputs, outputs, tools, and CrewAI code skeletons.</div>
+      </div>
+      <div class="preview-card" onclick="showPage('workflow')">
+        <div class="preview-card-num">02</div>
+        <div class="preview-card-label">Topology</div>
+        <div class="preview-card-title">Workflow</div>
+        <div class="preview-card-desc">Interactive system map with scenario walkthroughs — Research Loop, Trading Loop, Risk Events, Full Day.</div>
+      </div>
+      <div class="preview-card" onclick="showPage('strategy')">
+        <div class="preview-card-num">03</div>
+        <div class="preview-card-label">Pipeline</div>
+        <div class="preview-card-title">Strategy Lab</div>
+        <div class="preview-card-desc">Hypothesis funnel, validation states, walk-forward summaries, and the harsh reality of idea survival rates.</div>
+      </div>
+      <div class="preview-card" onclick="showPage('risk')">
+        <div class="preview-card-num">04</div>
+        <div class="preview-card-label">Controls</div>
+        <div class="preview-card-title">Risk Command Center</div>
+        <div class="preview-card-desc">Daily loss budget, kill-switch state, lot sizes, drawdown limits, and correlated exposure management.</div>
+      </div>
+      <div class="preview-card" onclick="showPage('execution')">
+        <div class="preview-card-num">05</div>
+        <div class="preview-card-label">Order Flow</div>
+        <div class="preview-card-title">Execution Console</div>
+        <div class="preview-card-desc">Live order states, slippage tracking, spread checks, error handling, and broker connection status.</div>
+      </div>
+      <div class="preview-card" onclick="showPage('monitoring')">
+        <div class="preview-card-num">06</div>
+        <div class="preview-card-label">Vigilance</div>
+        <div class="preview-card-title">Monitoring &amp; Incidents</div>
+        <div class="preview-card-desc">System health, data freshness, anomaly timeline, alert severity, and escalation authority.</div>
+      </div>
+      <div class="preview-card" onclick="showPage('performance')">
+        <div class="preview-card-num">07</div>
+        <div class="preview-card-label">Analytics</div>
+        <div class="preview-card-title">Performance</div>
+        <div class="preview-card-desc">Equity curve, win rate, expectancy, drawdown, regime breakdown, and weekly PM-style reporting.</div>
+      </div>
+      <div class="preview-card" onclick="showPage('governance')">
+        <div class="preview-card-num">08</div>
+        <div class="preview-card-label">Compliance</div>
+        <div class="preview-card-title">Governance</div>
+        <div class="preview-card-desc">Version control, audit trail, sign-off requirements, rollback plans, and release management.</div>
+      </div>
+      <div class="preview-card" onclick="showPage('docs')">
+        <div class="preview-card-num">09</div>
+        <div class="preview-card-label">Reference</div>
+        <div class="preview-card-title">System Manual</div>
+        <div class="preview-card-desc">Full documentation: architecture, build order, agent dictionary, glossary, FAQ, and technical notes.</div>
+      </div>
+    </div>
+
+    <div class="system-truths" style="margin-top:64px;">
+      <div class="section-label">System Truths — Non-Negotiable Design Principles</div>
+      <div class="truths-grid">
+        <div class="truth-item">
+          <div class="truth-text">The <strong style="color:var(--c1)">Orchestrator</strong> is the central coordinator. No agent acts autonomously without its authorization.</div>
+        </div>
+        <div class="truth-item">
+          <div class="truth-text"><strong style="color:var(--c5)">Backtest & Validation</strong> is intentionally harsh. If an idea cannot survive here, it cannot survive the market.</div>
+        </div>
+        <div class="truth-item">
+          <div class="truth-text"><strong style="color:var(--c6)">Risk always overrides signal strength.</strong> A perfect signal with no risk approval never gets executed.</div>
+        </div>
+        <div class="truth-item">
+          <div class="truth-text"><strong style="color:var(--c10)">Governance sign-off cannot be skipped.</strong> No strategy reaches live trading without a version hash and release notes.</div>
+        </div>
+        <div class="truth-item">
+          <div class="truth-text"><strong style="color:var(--c9)">Monitoring can escalate and pause trading</strong> at any moment. Silent failures are more dangerous than noisy ones.</div>
+        </div>
+        <div class="truth-item">
+          <div class="truth-text"><strong style="color:var(--c11)">Reporting closes the loop.</strong> A system you cannot understand is a system you cannot trust.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     PAGE: AGENT DESK
+═══════════════════════════════════ -->
+<div class="page" id="page-agents">
+  <div class="page-wrap">
+    <div class="page-hero">
+      <div class="page-hero-badge">CrewAI Architecture Blueprint</div>
+      <h2>AI FOREX<br>AGENT DESK</h2>
+      <p>11 specialized agents · 2 operating loops · 1 unified system. Each agent has a single, well-defined mandate. Click any agent to expand its full profile.</p>
+    </div>
+
+    <div class="loops-summary">
+      <div class="loop-summary-card research">
+        <div class="loop-summary-label">Loop A — Research Loop</div>
+        <div class="loop-summary-title">Build the Edge</div>
+        <div class="loop-agents">
+          <span class="loop-tag">01 Orchestrator</span>
+          <span class="loop-tag">02 Data Engineer</span>
+          <span class="loop-tag">03 Alpha Research</span>
+          <span class="loop-tag">04 Backtest &amp; Validation</span>
+          <span class="loop-tag">05 Risk Manager</span>
+          <span class="loop-tag">10 Governance</span>
+        </div>
+      </div>
+      <div class="loop-summary-card trading">
+        <div class="loop-summary-label">Loop B — Trading Loop</div>
+        <div class="loop-summary-title">Operate the Edge</div>
+        <div class="loop-agents">
+          <span class="loop-tag">01 Orchestrator</span>
+          <span class="loop-tag">06 Regime Agent</span>
+          <span class="loop-tag">07 Execution Agent</span>
+          <span class="loop-tag">08 Trade Management</span>
+          <span class="loop-tag">09 Monitoring</span>
+          <span class="loop-tag">11 Reporting</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label">Agent Profiles — Click to Expand</div>
+    <div class="agents-grid" id="agentsGrid"></div>
+
+    <div class="build-order-section">
+      <div class="section-label">Recommended Build Order</div>
+      <div class="build-steps">
+        <div class="build-step"><span class="build-step-num">1</span><span class="build-step-name">Data Engineer</span></div>
+        <div class="build-step"><span class="build-step-num">2</span><span class="build-step-name">Backtest Agent</span></div>
+        <div class="build-step"><span class="build-step-num">3</span><span class="build-step-name">Risk Manager</span></div>
+        <div class="build-step"><span class="build-step-num">4</span><span class="build-step-name">Execution Agent</span></div>
+        <div class="build-step"><span class="build-step-num">5</span><span class="build-step-name">Monitoring</span></div>
+        <div class="build-step"><span class="build-step-num">6+</span><span class="build-step-name">All Others</span></div>
+      </div>
+      <p style="margin-top:20px; font-size:13px; color:var(--txt-dim); font-family:'DM Mono',monospace; max-width:640px; line-height:1.8;">Build the foundation before adding intelligence. A clean data pipeline and honest backtester prevent 90% of failures. Never let any agent trade without Validation + Governance sign-off.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     PAGE: WORKFLOW
+═══════════════════════════════════ -->
+<div class="page" id="page-workflow">
+  <div class="page-wrap">
+    <div class="page-hero">
+      <div class="page-hero-badge">System Topology &amp; Scenario Walkthroughs</div>
+      <h2>AGENT WORKFLOW<br>MAP</h2>
+      <p>The Orchestrator sits at the center. Every signal, every trade, every risk decision flows through it. Select a scenario to walk through the step-by-step sequence.</p>
+    </div>
+
+    <div class="workflow-layout">
+      <div>
+        <!-- Topology diagram -->
+        <div class="topology-panel" style="margin-bottom:24px;">
+          <div class="topology-title">System Topology — Click any agent node to inspect</div>
+          <svg class="topo-svg" id="topoSvg" viewBox="0 0 600 420" xmlns="http://www.w3.org/2000/svg">
+            <!-- Ring decoration -->
+            <circle class="orch-ring" cx="300" cy="210" r="155"/>
+            <circle class="orch-ring" cx="300" cy="210" r="100"/>
+
+            <!-- Connection lines -->
+            <g id="connectLines" opacity="0.4"></g>
+
+            <!-- Orchestrator node (center) -->
+            <g class="agent-node orch-node an-0" onclick="selectAgent(0)">
+              <circle class="node-circle" cx="300" cy="210" r="42" stroke="#00d4ff" stroke-width="1.5" fill="rgba(0,212,255,0.08)"/>
+              <text x="300" y="205" text-anchor="middle" class="node-label" fill="#00d4ff" font-size="9" letter-spacing="2">ORCHESTRATOR</text>
+              <text x="300" y="218" text-anchor="middle" fill="#4a8090" font-size="7" font-family="'DM Mono',monospace">CENTRAL HUB</text>
+            </g>
+
+            <!-- Surrounding agents: positioned in a ring -->
+            <!-- Agent 1: Data Engineer (top-left) -->
+            <g class="agent-node an-1" onclick="selectAgent(1)" transform="translate(105,68)">
+              <circle class="node-circle" cx="0" cy="0" r="32" stroke="#3de0d0" stroke-width="1"/>
+              <text x="0" y="-5" text-anchor="middle" class="node-label" fill="#3de0d0" font-size="8">DATA</text>
+              <text x="0" y="7" text-anchor="middle" class="node-label" fill="#3de0d0" font-size="8">ENGINEER</text>
+            </g>
+
+            <!-- Agent 2: Regime (top) -->
+            <g class="agent-node an-2" onclick="selectAgent(2)" transform="translate(300,45)">
+              <circle class="node-circle" cx="0" cy="0" r="32" stroke="#f5c842" stroke-width="1"/>
+              <text x="0" y="-5" text-anchor="middle" class="node-label" fill="#f5c842" font-size="8">REGIME</text>
+              <text x="0" y="7" text-anchor="middle" class="node-label" fill="#f5c842" font-size="8">AGENT</text>
+            </g>
+
+            <!-- Agent 3: Alpha (top-right) -->
+            <g class="agent-node an-3" onclick="selectAgent(3)" transform="translate(495,68)">
+              <circle class="node-circle" cx="0" cy="0" r="32" stroke="#ff6e38" stroke-width="1"/>
+              <text x="0" y="-5" text-anchor="middle" class="node-label" fill="#ff6e38" font-size="8">ALPHA</text>
+              <text x="0" y="7" text-anchor="middle" class="node-label" fill="#ff6e38" font-size="8">RESEARCH</text>
+            </g>
+
+            <!-- Agent 4: Backtest (right) -->
+            <g class="agent-node an-4" onclick="selectAgent(4)" transform="translate(558,210)">
+              <circle class="node-circle" cx="0" cy="0" r="32" stroke="#ff3d57" stroke-width="1"/>
+              <text x="0" y="-5" text-anchor="middle" class="node-label" fill="#ff3d57" font-size="8">BACKTEST</text>
+              <text x="0" y="7" text-anchor="middle" class="node-label" fill="#ff3d57" font-size="8">+VALID.</text>
+            </g>
+
+            <!-- Agent 5: Risk (bottom-right) -->
+            <g class="agent-node an-5" onclick="selectAgent(5)" transform="translate(495,352)">
+              <circle class="node-circle" cx="0" cy="0" r="32" stroke="#50fa7b" stroke-width="1"/>
+              <text x="0" y="-5" text-anchor="middle" class="node-label" fill="#50fa7b" font-size="8">RISK</text>
+              <text x="0" y="7" text-anchor="middle" class="node-label" fill="#50fa7b" font-size="8">MANAGER</text>
+            </g>
+
+            <!-- Agent 6: Execution (bottom) -->
+            <g class="agent-node an-6" onclick="selectAgent(6)" transform="translate(300,375)">
+              <circle class="node-circle" cx="0" cy="0" r="32" stroke="#4da6ff" stroke-width="1"/>
+              <text x="0" y="-5" text-anchor="middle" class="node-label" fill="#4da6ff" font-size="8">EXECUTION</text>
+              <text x="0" y="7" text-anchor="middle" class="node-label" fill="#4da6ff" font-size="8">AGENT</text>
+            </g>
+
+            <!-- Agent 7: Trade Mgmt (bottom-left) -->
+            <g class="agent-node an-7" onclick="selectAgent(7)" transform="translate(105,352)">
+              <circle class="node-circle" cx="0" cy="0" r="32" stroke="#b39dff" stroke-width="1"/>
+              <text x="0" y="-5" text-anchor="middle" class="node-label" fill="#b39dff" font-size="8">TRADE</text>
+              <text x="0" y="7" text-anchor="middle" class="node-label" fill="#b39dff" font-size="8">MGMT</text>
+            </g>
+
+            <!-- Agent 8: Monitoring (left) -->
+            <g class="agent-node an-8" onclick="selectAgent(8)" transform="translate(42,210)">
+              <circle class="node-circle" cx="0" cy="0" r="32" stroke="#ff80b0" stroke-width="1"/>
+              <text x="0" y="-5" text-anchor="middle" class="node-label" fill="#ff80b0" font-size="8">MONITOR</text>
+              <text x="0" y="7" text-anchor="middle" class="node-label" fill="#ff80b0" font-size="8">AGENT</text>
+            </g>
+
+            <!-- Agent 9: Governance (inner left) -->
+            <g class="agent-node an-9" onclick="selectAgent(9)" transform="translate(178,140)">
+              <circle class="node-circle" cx="0" cy="0" r="26" stroke="#d070ff" stroke-width="1"/>
+              <text x="0" y="-4" text-anchor="middle" class="node-label" fill="#d070ff" font-size="7.5">GOVERN.</text>
+              <text x="0" y="7" text-anchor="middle" class="node-label" fill="#d070ff" font-size="7.5">+AUDIT</text>
+            </g>
+
+            <!-- Agent 10: Reporting (inner right) -->
+            <g class="agent-node an-10" onclick="selectAgent(10)" transform="translate(422,140)">
+              <circle class="node-circle" cx="0" cy="0" r="26" stroke="#a8e063" stroke-width="1"/>
+              <text x="0" y="-4" text-anchor="middle" class="node-label" fill="#a8e063" font-size="7.5">REPORT</text>
+              <text x="0" y="7" text-anchor="middle" class="node-label" fill="#a8e063" font-size="7.5">AGENT</text>
+            </g>
+          </svg>
+        </div>
+
+        <!-- Scenario selector -->
+        <div class="section-label">Scenario Walkthroughs</div>
+        <div class="scenario-btns">
+          <button class="scenario-btn active-research" data-scenario="research" onclick="setScenario('research')">Research Loop</button>
+          <button class="scenario-btn" data-scenario="trading" onclick="setScenario('trading')">Trading Loop</button>
+          <button class="scenario-btn" data-scenario="risk" onclick="setScenario('risk')">Risk Event</button>
+          <button class="scenario-btn" data-scenario="full" onclick="setScenario('full')">Full System Day</button>
+        </div>
+
+        <div class="seq-title" id="seqTitle"></div>
+        <div class="seq-steps animate-in" id="seqSteps"></div>
+      </div>
+
+      <!-- Side panel -->
+      <div class="side-panel">
+        <div class="side-panel-placeholder" id="infoPlaceholder">
+          ← Click any agent node on the diagram to inspect its connections and data flows.
+        </div>
+        <div id="agentDetail" style="display:none;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     PAGE: STRATEGY LAB
+═══════════════════════════════════ -->
+<div class="page" id="page-strategy">
+  <div class="page-wrap">
+    <div class="page-hero">
+      <div class="page-hero-badge">Alpha Research · Backtest Pipeline</div>
+      <h2>STRATEGY<br>LAB</h2>
+      <p>Where edge is forged or destroyed. Ideas enter the pipeline as hypotheses and emerge — rarely — as validated, deployable strategies. The survival rate is deliberately brutal.</p>
+    </div>
+
+    <div class="strategy-metrics">
+      <div class="metric-card">
+        <div class="metric-label">Ideas Generated (MTD)</div>
+        <div class="metric-value">148</div>
+        <div class="metric-sub">↑ 23 this week</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Passed Validation</div>
+        <div class="metric-value" style="color:var(--pass)">4</div>
+        <div class="metric-sub">2.7% survival rate</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">In Testing</div>
+        <div class="metric-value" style="color:var(--c3)">12</div>
+        <div class="metric-sub">Backtest queue</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Rejected</div>
+        <div class="metric-value" style="color:var(--fail)">132</div>
+        <div class="metric-sub">By design</div>
+      </div>
+    </div>
+
+    <div class="funnel-section">
+      <div class="funnel-title">Validation Funnel — The Brutal Reality</div>
+      <div class="funnel-stages">
+        <div class="funnel-stage">
+          <div class="funnel-bar" style="background:rgba(0,212,255,0.7); width:100%">148</div>
+          <div class="funnel-info">
+            <div class="funnel-stage-name">HYPOTHESIS GENERATED</div>
+            <div class="funnel-stage-desc">Alpha Research generates ideas from regime analysis, pattern recognition, and cross-instrument correlations. All ideas enter the queue.</div>
+          </div>
+        </div>
+        <div class="funnel-stage">
+          <div class="funnel-bar" style="background:rgba(245,200,66,0.7); width:55%">81</div>
+          <div class="funnel-info">
+            <div class="funnel-stage-name">INITIAL SCREEN PASSED</div>
+            <div class="funnel-stage-desc">Quick statistical plausibility check. Does the logic make economic sense? Does preliminary data support the hypothesis direction?</div>
+          </div>
+        </div>
+        <div class="funnel-stage">
+          <div class="funnel-bar" style="background:rgba(255,110,56,0.7); width:28%">41</div>
+          <div class="funnel-info">
+            <div class="funnel-stage-name">IN-SAMPLE BACKTEST RUN</div>
+            <div class="funnel-stage-desc">Full historical backtest on the training period. Minimum Sharpe 0.8, max drawdown &lt;15%, 100+ trades required for statistical validity.</div>
+          </div>
+        </div>
+        <div class="funnel-stage">
+          <div class="funnel-bar" style="background:rgba(255,61,87,0.7); width:14%">21</div>
+          <div class="funnel-info">
+            <div class="funnel-stage-name">WALK-FORWARD TEST</div>
+            <div class="funnel-stage-desc">Out-of-sample validation across 6 unseen market regimes. This kills most strategies that were overfit to the training period.</div>
+          </div>
+        </div>
+        <div class="funnel-stage">
+          <div class="funnel-bar" style="background:rgba(179,157,255,0.7); width:6%">9</div>
+          <div class="funnel-info">
+            <div class="funnel-stage-name">STRESS TEST &amp; SENSITIVITY</div>
+            <div class="funnel-stage-desc">Worst-case scenarios: 2020 crash, 2022 rate shock, low-liquidity sessions. Parameter sensitivity maps ensure robustness.</div>
+          </div>
+        </div>
+        <div class="funnel-stage">
+          <div class="funnel-bar" style="background:rgba(80,250,123,0.8); width:3%">4</div>
+          <div class="funnel-info">
+            <div class="funnel-stage-name">GOVERNANCE APPROVED</div>
+            <div class="funnel-stage-desc">Risk envelope defined, Governance signs off, version hash locked, rollback plan written. Strategy is cleared for live deployment.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label">Current Strategy Pipeline</div>
+    <div class="strategies-grid">
+      <div class="strategy-card pass">
+        <div class="strategy-card-header">
+          <div>
+            <div class="strategy-id">STR-0041 · XAUUSD</div>
+            <div class="strategy-name">London Breakout Fade</div>
+            <div class="strategy-pair">XAU/USD · H1</div>
+          </div>
+          <span class="status-badge approved">LIVE</span>
+        </div>
+        <div style="font-size:12.5px; color:var(--txt); line-height:1.65; margin-bottom:12px;">Counter-trend fade of the initial London session spike in XAUUSD when ATR expansion exceeds 1.8x the 20-period average and price retests the Asian range midpoint.</div>
+        <div class="strategy-metrics-row">
+          <div class="strategy-metric">
+            <div class="strategy-metric-label">Sharpe (WF)</div>
+            <div class="strategy-metric-val" style="color:var(--pass)">1.34</div>
+          </div>
+          <div class="strategy-metric">
+            <div class="strategy-metric-label">Win Rate</div>
+            <div class="strategy-metric-val" style="color:var(--c3)">52.1%</div>
+          </div>
+          <div class="strategy-metric">
+            <div class="strategy-metric-label">Max DD</div>
+            <div class="strategy-metric-val" style="color:var(--fail)">8.3%</div>
+          </div>
+        </div>
+        <div class="gate-badge pass">✓ GOVERNANCE SIGNED — v2.1.4</div>
+      </div>
+
+      <div class="strategy-card fail">
+        <div class="strategy-card-header">
+          <div>
+            <div class="strategy-id">STR-0044 · EURUSD</div>
+            <div class="strategy-name">NY Momentum Follow</div>
+            <div class="strategy-pair">EUR/USD · M15</div>
+          </div>
+          <span class="status-badge blocked">REJECTED</span>
+        </div>
+        <div style="font-size:12.5px; color:var(--txt); line-height:1.65; margin-bottom:12px;">Trend-following strategy on NY session momentum signals. Failed walk-forward validation due to performance collapse during 2022 high-volatility USD regime.</div>
+        <div class="strategy-metrics-row">
+          <div class="strategy-metric">
+            <div class="strategy-metric-label">Sharpe (IS)</div>
+            <div class="strategy-metric-val" style="color:var(--pass)">1.12</div>
+          </div>
+          <div class="strategy-metric">
+            <div class="strategy-metric-label">Sharpe (OOS)</div>
+            <div class="strategy-metric-val" style="color:var(--fail)">-0.31</div>
+          </div>
+          <div class="strategy-metric">
+            <div class="strategy-metric-label">Verdict</div>
+            <div class="strategy-metric-val" style="color:var(--fail)">FAIL</div>
+          </div>
+        </div>
+        <div class="gate-badge block">⛔ OVERFIT — Walk-Forward Collapse</div>
+      </div>
+
+      <div class="strategy-card testing">
+        <div class="strategy-card-header">
+          <div>
+            <div class="strategy-id">STR-0046 · GBPUSD</div>
+            <div class="strategy-name">Asia Range Mean Rev.</div>
+            <div class="strategy-pair">GBP/USD · H4</div>
+          </div>
+          <span class="status-badge testing">BACKTEST</span>
+        </div>
+        <div style="font-size:12.5px; color:var(--txt); line-height:1.65; margin-bottom:12px;">Mean reversion after extended Asian session range compression. Hypothesis: GBP tends to revert to weekly midpoint when Asia range is &lt;30% of 20-week ATR.</div>
+        <div class="strategy-metrics-row">
+          <div class="strategy-metric">
+            <div class="strategy-metric-label">IS Sharpe</div>
+            <div class="strategy-metric-val" style="color:var(--c3)">0.97</div>
+          </div>
+          <div class="strategy-metric">
+            <div class="strategy-metric-label">OOS Status</div>
+            <div class="strategy-metric-val" style="color:var(--c3)">RUNNING</div>
+          </div>
+          <div class="strategy-metric">
+            <div class="strategy-metric-label">ETA</div>
+            <div class="strategy-metric-val" style="color:var(--txt)">2d</div>
+          </div>
+        </div>
+        <div class="gate-badge warn">⧖ PENDING — Walk-Forward in Progress</div>
+      </div>
+
+      <div class="strategy-card pass">
+        <div class="strategy-card-header">
+          <div>
+            <div class="strategy-id">STR-0038 · USDJPY</div>
+            <div class="strategy-name">BOJ Drift Capture</div>
+            <div class="strategy-pair">USD/JPY · Daily</div>
+          </div>
+          <span class="status-badge approved">LIVE</span>
+        </div>
+        <div style="font-size:12.5px; color:var(--txt); line-height:1.65; margin-bottom:12px;">Exploits systematic drift in USDJPY during BOJ intervention-free periods. Identifies quiet drift regimes using realized volatility percentile and carry differential.</div>
+        <div class="strategy-metrics-row">
+          <div class="strategy-metric">
+            <div class="strategy-metric-label">Sharpe (WF)</div>
+            <div class="strategy-metric-val" style="color:var(--pass)">1.61</div>
+          </div>
+          <div class="strategy-metric">
+            <div class="strategy-metric-label">Win Rate</div>
+            <div class="strategy-metric-val" style="color:var(--c3)">44.2%</div>
+          </div>
+          <div class="strategy-metric">
+            <div class="strategy-metric-label">Expectancy</div>
+            <div class="strategy-metric-val" style="color:var(--pass)">+2.3R</div>
+          </div>
+        </div>
+        <div class="gate-badge pass">✓ GOVERNANCE SIGNED — v1.8.2</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     PAGE: RISK COMMAND CENTER
+═══════════════════════════════════ -->
+<div class="page" id="page-risk">
+  <div class="page-wrap">
+    <div class="page-hero">
+      <div class="page-hero-badge">Risk Manager Agent · Always-On Override</div>
+      <h2>RISK COMMAND<br>CENTER</h2>
+      <p>Risk is the first-class citizen of this system. Signal strength is irrelevant without a risk-approved envelope. The Risk Manager's decision cannot be overridden by any other agent.</p>
+    </div>
+
+    <div class="risk-status-bar">
+      <div class="risk-status-dot"></div>
+      <div class="risk-status-text">SYSTEM OPERATIONAL · TRADING ACTIVE · DAILY BUDGET INTACT</div>
+      <div style="margin-left:auto; font-family:'DM Mono',monospace; font-size:10px; color:var(--txt-dim)">Updated: 14:32:07 UTC</div>
+    </div>
+
+    <div class="risk-metrics">
+      <div class="metric-card">
+        <div class="metric-label">Daily Loss Budget</div>
+        <div class="metric-value">$840</div>
+        <div class="metric-sub">$360 used · 57.1% remaining</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Open Risk Budget</div>
+        <div class="metric-value" style="color:var(--c3)">$420</div>
+        <div class="metric-sub">Across 2 open positions</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Max Drawdown (MTD)</div>
+        <div class="metric-value" style="color:var(--pass)">3.8%</div>
+        <div class="metric-sub">Limit: 8.0% · Safe</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Kill-Switch State</div>
+        <div class="metric-value" style="color:var(--pass)">OFF</div>
+        <div class="metric-sub">All systems nominal</div>
+      </div>
+    </div>
+
+    <div class="risk-gauge-grid">
+      <div class="risk-gauge-card">
+        <div class="gauge-label">Daily Loss Consumed</div>
+        <div class="gauge-bar-track">
+          <div class="gauge-bar-fill" style="width:42.9%; background: linear-gradient(90deg, var(--pass), var(--c3))"></div>
+        </div>
+        <div class="gauge-val">42.9<span class="gauge-unit">% OF LIMIT</span></div>
+        <div style="margin-top:8px; font-family:'DM Mono',monospace; font-size:11px; color:var(--txt-dim)">$360 of $840 · Auto-pause at 75% · Kill-switch at 100%</div>
+      </div>
+      <div class="risk-gauge-card">
+        <div class="gauge-label">Monthly Drawdown</div>
+        <div class="gauge-bar-track">
+          <div class="gauge-bar-fill" style="width:47.5%; background: linear-gradient(90deg, var(--pass), var(--c3))"></div>
+        </div>
+        <div class="gauge-val">3.8<span class="gauge-unit">% OF EQUITY</span></div>
+        <div style="margin-top:8px; font-family:'DM Mono',monospace; font-size:11px; color:var(--txt-dim)">Limit: 8.0% · Warning at 5% · Stop at 8%</div>
+      </div>
+      <div class="risk-gauge-card">
+        <div class="gauge-label">Correlated Exposure</div>
+        <div class="gauge-bar-track">
+          <div class="gauge-bar-fill" style="width:28%; background: var(--pass)"></div>
+        </div>
+        <div class="gauge-val">28<span class="gauge-unit">% CAP</span></div>
+        <div style="margin-top:8px; font-family:'DM Mono',monospace; font-size:11px; color:var(--txt-dim)">XAUUSD + USDJPY · Max 40% in correlated pairs</div>
+      </div>
+      <div class="risk-gauge-card">
+        <div class="gauge-label">Approved Lot Sizes</div>
+        <div style="margin-top:16px;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-family:'DM Mono',monospace; font-size:12px;">
+            <span style="color:var(--txt-dim)">XAU/USD</span><span style="color:var(--txt-bright)">0.02 lots</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-family:'DM Mono',monospace; font-size:12px;">
+            <span style="color:var(--txt-dim)">USD/JPY</span><span style="color:var(--txt-bright)">0.05 lots</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-family:'DM Mono',monospace; font-size:12px;">
+            <span style="color:var(--txt-dim)">GBP/USD</span><span style="color:rgba(255,61,87,0.7)">BLOCKED (research)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="risk-rules">
+      <div class="section-label">Risk Envelope — Active Rules</div>
+      <div class="risk-rules-grid">
+        <div class="risk-rule">
+          <div class="risk-rule-type hard">Hard Limit</div>
+          <div class="risk-rule-text">Daily loss ≥ $840 → Immediate kill-switch. All positions closed or hedged. No new orders until next session + human sign-off.</div>
+        </div>
+        <div class="risk-rule">
+          <div class="risk-rule-type hard">Hard Limit</div>
+          <div class="risk-rule-text">Monthly drawdown ≥ 8% → Full system halt. Trading resumes only after governance review and risk recalibration.</div>
+        </div>
+        <div class="risk-rule">
+          <div class="risk-rule-type soft">Soft Limit</div>
+          <div class="risk-rule-text">Daily loss ≥ $630 (75%) → Size reduced by 50%. System continues but in defensive mode. Human operator notified.</div>
+        </div>
+        <div class="risk-rule">
+          <div class="risk-rule-type soft">Soft Limit</div>
+          <div class="risk-rule-text">Spread ≥ 4x baseline → Order placement suspended. Trade Management protects open positions but no new entries.</div>
+        </div>
+        <div class="risk-rule">
+          <div class="risk-rule-type passive">Position Rule</div>
+          <div class="risk-rule-text">Max 1% equity risk per trade. Lot size calculated from current equity, live ATR, and instrument pip value every execution.</div>
+        </div>
+        <div class="risk-rule">
+          <div class="risk-rule-type passive">Correlation Rule</div>
+          <div class="risk-rule-text">No more than 40% of risk budget in correlated pairs (e.g., XAUUSD + EURUSD as USD-correlated instruments).</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     PAGE: EXECUTION CONSOLE
+═══════════════════════════════════ -->
+<div class="page" id="page-execution">
+  <div class="page-wrap">
+    <div class="page-hero">
+      <div class="page-hero-badge">Execution Agent · Trade Management</div>
+      <h2>EXECUTION<br>CONSOLE</h2>
+      <p>Where approved signals become real broker orders. Every placement, fill, rejection, and slippage event is logged with full context. No silent failures tolerated.</p>
+    </div>
+
+    <div class="section-label">Live Order Feed</div>
+    <div class="exec-live-feed">
+      <div class="exec-feed-line">
+        <span class="exec-feed-time">14:32:07</span>
+        <span class="exec-feed-agent">EXECUTION AGENT</span>
+        <span class="exec-feed-msg">Pre-trade spread check XAUUSD · spread=18pts · baseline=16pts · ratio=1.13x → PASS</span>
+        <span class="exec-feed-status"><span class="status-badge live">PASS</span></span>
+      </div>
+      <div class="exec-feed-line">
+        <span class="exec-feed-time">14:32:08</span>
+        <span class="exec-feed-agent">EXECUTION AGENT</span>
+        <span class="exec-feed-msg">BUY XAUUSD 0.02 @ MARKET · SL=2381.20 · TP=2398.60 · sending to MT5</span>
+        <span class="exec-feed-status"><span class="status-badge testing">PENDING</span></span>
+      </div>
+      <div class="exec-feed-line">
+        <span class="exec-feed-time">14:32:09</span>
+        <span class="exec-feed-agent">MT5 BROKER</span>
+        <span class="exec-feed-msg">Order #48821 FILLED · fill price=2384.32 · slippage=+0.4pts · commission=$0.18</span>
+        <span class="exec-feed-status"><span class="status-badge live">FILLED</span></span>
+      </div>
+      <div class="exec-feed-line">
+        <span class="exec-feed-time">14:32:10</span>
+        <span class="exec-feed-agent">TRADE MGMT</span>
+        <span class="exec-feed-msg">Position #48821 registered · ATR stop monitoring active · trailing mode: off until +1R</span>
+        <span class="exec-feed-status"><span class="status-badge approved">ACTIVE</span></span>
+      </div>
+    </div>
+
+    <div class="section-label" style="margin-top:40px;">Order History</div>
+    <table class="orders-table">
+      <thead>
+        <tr>
+          <th>Order ID</th>
+          <th>Pair</th>
+          <th>Side</th>
+          <th>Lots</th>
+          <th>Fill Price</th>
+          <th>Expected</th>
+          <th>Slippage</th>
+          <th>Commission</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="order-id">#48821</td>
+          <td class="order-pair">XAU/USD</td>
+          <td class="order-side-buy">BUY</td>
+          <td>0.02</td>
+          <td>2384.32</td>
+          <td>2383.92</td>
+          <td class="slippage-pos">+0.4</td>
+          <td>$0.18</td>
+          <td><span class="status-badge live">OPEN</span></td>
+        </tr>
+        <tr>
+          <td class="order-id">#48809</td>
+          <td class="order-pair">USD/JPY</td>
+          <td class="order-side-buy">BUY</td>
+          <td>0.05</td>
+          <td>154.821</td>
+          <td>154.825</td>
+          <td class="slippage-neg">-0.4</td>
+          <td>$0.25</td>
+          <td><span class="status-badge live">OPEN</span></td>
+        </tr>
+        <tr>
+          <td class="order-id">#48796</td>
+          <td class="order-pair">XAU/USD</td>
+          <td class="order-side-sell">SELL</td>
+          <td>0.02</td>
+          <td>2379.10</td>
+          <td>2379.05</td>
+          <td class="slippage-pos">+0.5</td>
+          <td>$0.18</td>
+          <td><span class="status-badge approved">CLOSED +$18.40</span></td>
+        </tr>
+        <tr>
+          <td class="order-id">#48781</td>
+          <td class="order-pair">GBP/USD</td>
+          <td class="order-side-buy">BUY</td>
+          <td>0.03</td>
+          <td>—</td>
+          <td>1.26842</td>
+          <td>—</td>
+          <td>—</td>
+          <td><span class="status-badge halted">REJECTED</span></td>
+        </tr>
+        <tr>
+          <td class="order-id">#48771</td>
+          <td class="order-pair">USD/JPY</td>
+          <td class="order-side-sell">SELL</td>
+          <td>0.05</td>
+          <td>154.240</td>
+          <td>154.238</td>
+          <td class="slippage-pos">+0.2</td>
+          <td>$0.25</td>
+          <td><span class="status-badge approved">CLOSED -$6.20</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="order-lifecycle">
+      <div class="section-label">Order Lifecycle</div>
+      <div class="lifecycle-flow">
+        <div class="lifecycle-step">Signal Generated</div>
+        <div class="lifecycle-arrow">→</div>
+        <div class="lifecycle-step">Risk Approved</div>
+        <div class="lifecycle-arrow">→</div>
+        <div class="lifecycle-step">Gov. Cleared</div>
+        <div class="lifecycle-arrow">→</div>
+        <div class="lifecycle-step active">Spread Check</div>
+        <div class="lifecycle-arrow">→</div>
+        <div class="lifecycle-step">MT5 Submit</div>
+        <div class="lifecycle-arrow">→</div>
+        <div class="lifecycle-step">Fill / Reject</div>
+        <div class="lifecycle-arrow">→</div>
+        <div class="lifecycle-step">SL/TP Confirm</div>
+        <div class="lifecycle-arrow">→</div>
+        <div class="lifecycle-step">Trade Mgmt</div>
+        <div class="lifecycle-arrow">→</div>
+        <div class="lifecycle-step">Closed</div>
+      </div>
+      <div style="margin-top:20px; background:rgba(0,0,0,0.3); border:1px solid var(--border); padding:16px; font-family:'DM Mono',monospace; font-size:12px; color:var(--txt);">
+        <strong style="color:var(--c1)">Rejection #48781 reason:</strong> GBPUSD strategy STR-0046 is currently in backtest phase — not yet Governance-approved. Execution Agent blocked the order per system protocol. No trade executes without sign-off.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     PAGE: MONITORING
+═══════════════════════════════════ -->
+<div class="page" id="page-monitoring">
+  <div class="page-wrap">
+    <div class="page-hero">
+      <div class="page-hero-badge">Monitoring Agent · 24/7 Vigilance</div>
+      <h2>MONITORING &amp;<br>INCIDENTS</h2>
+      <p>The Monitoring Agent never sleeps. It watches data feeds, PnL deviations, broker connections, and spread behavior — and can halt the entire system unilaterally when needed.</p>
+    </div>
+
+    <div class="health-grid">
+      <div class="health-card ok">
+        <div class="health-icon">📡</div>
+        <div class="health-title">MT5 Connection</div>
+        <div class="health-value" style="color:var(--pass)">ONLINE</div>
+        <div class="health-sub">Latency: 12ms · Uptime: 99.91%</div>
+      </div>
+      <div class="health-card ok">
+        <div class="health-icon">📊</div>
+        <div class="health-title">Data Feed</div>
+        <div class="health-value" style="color:var(--pass)">FRESH</div>
+        <div class="health-sub">Last tick: 3s ago · All feeds live</div>
+      </div>
+      <div class="health-card warn">
+        <div class="health-icon">📈</div>
+        <div class="health-title">XAUUSD Spread</div>
+        <div class="health-value" style="color:var(--block)">ELEVATED</div>
+        <div class="health-sub">22pts · Baseline 16pts · 1.38x</div>
+      </div>
+      <div class="health-card ok">
+        <div class="health-icon">💰</div>
+        <div class="health-title">PnL Deviation</div>
+        <div class="health-value" style="color:var(--pass)">NORMAL</div>
+        <div class="health-sub">+0.4σ from backtest range</div>
+      </div>
+    </div>
+
+    <div class="section-label">Incident Timeline — Last 48 Hours</div>
+    <div class="incident-timeline">
+      <div class="incident-entry severity-2">
+        <div class="incident-time">Today 11:42 UTC</div>
+        <div class="incident-dot"></div>
+        <div class="incident-body">
+          <div class="incident-type">Spread Spike — SEVERITY 2</div>
+          <div class="incident-msg">XAUUSD spread reached 38pts (2.4x baseline) during US CPI release</div>
+          <div class="incident-detail">System automatically paused XAUUSD order placement for 8 minutes. Resumed at 11:50 when spread returned to 19pts. No open positions affected. Human operator notified via Telegram.</div>
+        </div>
+      </div>
+      <div class="incident-entry severity-1">
+        <div class="incident-time">Today 08:05 UTC</div>
+        <div class="incident-dot"></div>
+        <div class="incident-body">
+          <div class="incident-type">Routine — SEVERITY 1</div>
+          <div class="incident-msg">Morning data refresh completed — 2 minor quality flags resolved</div>
+          <div class="incident-detail">Data Engineer flagged a gap in USDJPY weekend data and an anomalous candle on XAUUSD M1. Both resolved by substituting VWAP-adjusted closes. Gold dataset versioned as v2024.03.05.a</div>
+        </div>
+      </div>
+      <div class="incident-entry severity-1">
+        <div class="incident-time">Yesterday 16:32 UTC</div>
+        <div class="incident-dot"></div>
+        <div class="incident-body">
+          <div class="incident-type">System Info — SEVERITY 1</div>
+          <div class="incident-msg">Daily report generated and delivered. All positions closed end of NY session.</div>
+          <div class="incident-detail">Day result: +$127.40 net. 4 trades. 3 wins / 1 loss. Sharpe compatible with backtest expectations. No risk events. System passed daily health check.</div>
+        </div>
+      </div>
+      <div class="incident-entry severity-3">
+        <div class="incident-time">3 days ago 13:18 UTC</div>
+        <div class="incident-dot"></div>
+        <div class="incident-body">
+          <div class="incident-type">Kill-Switch Triggered — SEVERITY 3</div>
+          <div class="incident-msg">Daily loss limit reached (102% of $840 budget)</div>
+          <div class="incident-detail">4 consecutive losses on XAUUSD in an unusual trending regime. Kill-switch triggered automatically. All positions closed within 45 seconds. Human operator review completed at 14:30 UTC. Trading resumed next session after risk recalibration.</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:24px; background:var(--surface); border:1px solid var(--border); padding:28px;">
+      <div class="section-label">Monitoring Authority</div>
+      <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px;">
+        <div style="padding:16px; background:rgba(255,128,176,0.06); border:1px solid rgba(255,128,176,0.15);">
+          <div style="font-family:'DM Mono',monospace; font-size:9px; letter-spacing:2px; color:var(--c9); margin-bottom:8px;">UNILATERAL AUTHORITY</div>
+          <div style="font-size:13px; color:var(--txt); line-height:1.6;">Can trigger kill-switch without Orchestrator approval. Speed matters more than consensus in emergencies.</div>
+        </div>
+        <div style="padding:16px; background:rgba(255,128,176,0.06); border:1px solid rgba(255,128,176,0.15);">
+          <div style="font-family:'DM Mono',monospace; font-size:9px; letter-spacing:2px; color:var(--c9); margin-bottom:8px;">ESCALATION PATH</div>
+          <div style="font-size:13px; color:var(--txt); line-height:1.6;">Soft alert → Reduce size → Hard alert → Pause trading → Kill-switch → Human review. Graduated response.</div>
+        </div>
+        <div style="padding:16px; background:rgba(255,128,176,0.06); border:1px solid rgba(255,128,176,0.15);">
+          <div style="font-family:'DM Mono',monospace; font-size:9px; letter-spacing:2px; color:var(--c9); margin-bottom:8px;">24/7 OPERATION</div>
+          <div style="font-size:13px; color:var(--txt); line-height:1.6;">Runs continuously. Telegram alerts dispatched within seconds of any threshold breach. Silent failures = emergencies.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     PAGE: PERFORMANCE
+═══════════════════════════════════ -->
+<div class="page" id="page-performance">
+  <div class="page-wrap">
+    <div class="page-hero">
+      <div class="page-hero-badge">Reporting Agent · Weekly PM-Style Reports</div>
+      <h2>PERFORMANCE<br>ANALYTICS</h2>
+      <p>A system you cannot understand is a system you cannot trust. The Reporting Agent translates machine logs into human-readable intelligence — closing the loop.</p>
+    </div>
+
+    <div class="perf-metrics">
+      <div class="metric-card">
+        <div class="metric-label">Net PnL (MTD)</div>
+        <div class="metric-value" style="color:var(--pass)">+$842</div>
+        <div class="metric-sub">+8.4% on $10,000 account</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Sharpe Ratio</div>
+        <div class="metric-value" style="color:var(--pass)">1.28</div>
+        <div class="metric-sub">Annualized · Live</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Win Rate</div>
+        <div class="metric-value" style="color:var(--c3)">51.4%</div>
+        <div class="metric-sub">36W / 34L this month</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Avg Expectancy</div>
+        <div class="metric-value" style="color:var(--pass)">+1.84R</div>
+        <div class="metric-sub">Per trade, risk-adjusted</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Max Drawdown</div>
+        <div class="metric-value" style="color:var(--c3)">3.8%</div>
+        <div class="metric-sub">Peak-to-trough (MTD)</div>
+      </div>
+    </div>
+
+    <div class="equity-chart-container">
+      <div class="chart-title">Equity Curve — MTD</div>
+      <svg width="100%" height="220" viewBox="0 0 800 220" preserveAspectRatio="none" style="display:block">
+        <defs>
+          <linearGradient id="equityGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#50fa7b" stop-opacity="0.2"/>
+            <stop offset="100%" stop-color="#50fa7b" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <!-- Grid lines -->
+        <line x1="0" y1="55" x2="800" y2="55" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+        <line x1="0" y1="110" x2="800" y2="110" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+        <line x1="0" y1="165" x2="800" y2="165" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+        <!-- Area fill -->
+        <path d="M0,180 L40,172 L80,165 L120,168 L160,155 L200,150 L240,145 L280,142 L320,138 L360,130 L400,133 L440,125 L480,120 L520,115 L560,108 L600,102 L640,96 L680,90 L720,85 L760,80 L800,76 L800,220 L0,220 Z" fill="url(#equityGrad)"/>
+        <!-- Equity line -->
+        <polyline points="0,180 40,172 80,165 120,168 160,155 200,150 240,145 280,142 320,138 360,130 400,133 440,125 480,120 520,115 560,108 600,102 640,96 680,90 720,85 760,80 800,76" fill="none" stroke="#50fa7b" stroke-width="1.5"/>
+        <!-- Kill-switch event marker -->
+        <line x1="640" y1="0" x2="640" y2="220" stroke="rgba(255,61,87,0.3)" stroke-width="1" stroke-dasharray="4 4"/>
+        <text x="644" y="20" font-family="'DM Mono',monospace" font-size="9" fill="rgba(255,61,87,0.6)">Kill-Switch</text>
+      </svg>
+      <div class="chart-labels-x">
+        <span>Mar 01</span><span>Mar 05</span><span>Mar 10</span><span>Mar 15</span>
+        <span>Mar 20</span><span>Mar 25</span><span>Today</span>
+      </div>
+    </div>
+
+    <div class="perf-breakdown">
+      <div class="breakdown-card">
+        <div class="breakdown-title">Performance by Strategy</div>
+        <div class="breakdown-row">
+          <div class="breakdown-name">London Breakout Fade (XAU)</div>
+          <div class="breakdown-val pos">+$612</div>
+        </div>
+        <div class="breakdown-row">
+          <div class="breakdown-name">BOJ Drift Capture (JPY)</div>
+          <div class="breakdown-val pos">+$281</div>
+        </div>
+        <div class="breakdown-row">
+          <div class="breakdown-name">Commission &amp; Spreads</div>
+          <div class="breakdown-val neg">-$51</div>
+        </div>
+        <div class="breakdown-row" style="border-top:1px solid var(--border2); margin-top:8px; padding-top:8px;">
+          <div class="breakdown-name" style="font-weight:600; color:var(--txt-bright)">Net MTD</div>
+          <div class="breakdown-val pos" style="font-weight:600">+$842</div>
+        </div>
+      </div>
+
+      <div class="breakdown-card">
+        <div class="breakdown-title">Performance by Regime</div>
+        <div class="breakdown-row">
+          <div class="breakdown-name">Trending (42% of sessions)</div>
+          <div class="breakdown-val pos">+$734</div>
+        </div>
+        <div class="breakdown-row">
+          <div class="breakdown-name">Range-bound (38%)</div>
+          <div class="breakdown-val neutral">+$148</div>
+        </div>
+        <div class="breakdown-row">
+          <div class="breakdown-name">High-vol / news (12%)</div>
+          <div class="breakdown-val neg">-$89</div>
+        </div>
+        <div class="breakdown-row">
+          <div class="breakdown-name">No-trade / stand-down (8%)</div>
+          <div class="breakdown-val neutral">$0</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:24px; background:var(--surface); border:1px solid var(--border); padding:28px;">
+      <div class="section-label">Reporting Agent Output</div>
+      <div style="background:#040608; border:1px solid var(--border); padding:20px; font-family:'DM Mono',monospace; font-size:12px; line-height:1.9; color:var(--txt);">
+        <div style="color:var(--c11); margin-bottom:16px;">// WEEKLY PM REPORT — Week of Mar 03, 2025</div>
+        <div style="color:var(--txt-dim); margin-bottom:8px;">WHAT WORKED:</div>
+        <div style="padding-left:20px; margin-bottom:14px;">XAU London Fade continued to perform in a high-ATR environment. 3 clean trades with positive slippage on 2 of 3 fills. Strategy behaving within backtest expectations.</div>
+        <div style="color:var(--txt-dim); margin-bottom:8px;">WHAT FAILED:</div>
+        <div style="padding-left:20px; margin-bottom:14px;">Kill-switch event on Mar 02 from 4 consecutive XAUUSD losses. Post-review: market was in an unusual trend continuation mode that falls outside the strategy's trained regime. Risk calibration holding correctly.</div>
+        <div style="color:var(--txt-dim); margin-bottom:8px;">NEXT WEEK ACTIONS:</div>
+        <div style="padding-left:20px;">1. Run sensitivity analysis on XAU Fade entry threshold. 2. Check GBPUSD walk-forward result (ETA 2 days). 3. Review lot size on USDJPY given elevated JPY volatility.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     PAGE: GOVERNANCE
+═══════════════════════════════════ -->
+<div class="page" id="page-governance">
+  <div class="page-wrap">
+    <div class="page-hero">
+      <div class="page-hero-badge">Governance &amp; Audit Agent · Zero-Skip Policy</div>
+      <h2>GOVERNANCE<br>CENTER</h2>
+      <p>The most dangerous moment in automated trading is a "small tweak" deployed without re-validation. Governance is the last gate before live. It cannot be bypassed.</p>
+    </div>
+
+    <div class="gov-principle">
+      <div class="gov-principle-icon">⚖</div>
+      <div>
+        <div class="gov-principle-label">Core Rule — Zero Exceptions</div>
+        <div class="gov-principle-text">No strategy, no configuration change, no model version update reaches live trading without a Backtest PASS, Risk envelope definition, reproducibility certification, signed release notes, and rollback plan. If any element is missing, deployment is blocked.</div>
+      </div>
+    </div>
+
+    <div class="section-label">Release Registry</div>
+    <div class="gov-releases">
+      <div class="gov-release header">
+        <div>Version</div>
+        <div>Date</div>
+        <div>Change Summary</div>
+        <div>Status</div>
+      </div>
+      <div class="gov-release">
+        <div class="gov-version">v2.1.4<br><span class="gov-hash">a3f92b1c</span></div>
+        <div>Mar 04, 2025</div>
+        <div>XAU London Fade: tightened entry ATR threshold from 2.0x to 1.8x. Full walk-forward re-run passed. Rollback: v2.1.3.</div>
+        <div><span class="status-badge live">LIVE</span></div>
+      </div>
+      <div class="gov-release">
+        <div class="gov-version">v2.1.3<br><span class="gov-hash">7d841ea2</span></div>
+        <div>Feb 24, 2025</div>
+        <div>Risk Manager: updated daily loss limit from $750 to $840 following equity growth. Recalibrated all lot sizes accordingly.</div>
+        <div><span class="status-badge approved">ARCHIVED</span></div>
+      </div>
+      <div class="gov-release">
+        <div class="gov-version">v2.1.2<br><span class="gov-hash">2c319f7a</span></div>
+        <div>Feb 14, 2025</div>
+        <div>BOJ Drift Capture: added news blackout window (30min around BOJ announcements). Backtest confirmed +0.12 Sharpe improvement.</div>
+        <div><span class="status-badge approved">ARCHIVED</span></div>
+      </div>
+      <div class="gov-release" style="background:rgba(255,61,87,0.04);">
+        <div class="gov-version" style="color:var(--fail);">v2.1.1-rc<br><span class="gov-hash">9b40d31f</span></div>
+        <div>Feb 08, 2025</div>
+        <div>NY Momentum Follow (EURUSD): failed walk-forward validation. Blocked before deployment. See rejection report STR-0044.</div>
+        <div><span class="status-badge blocked">BLOCKED</span></div>
+      </div>
+    </div>
+
+    <div class="section-label" style="margin-top:40px;">Audit Trail</div>
+    <div class="audit-trail">
+      <div class="audit-line">
+        <span class="audit-ts">2025-03-04 09:14:33</span>
+        <span class="audit-actor">GOVERNANCE_AGENT</span>
+        <span class="audit-action">SIGNED_RELEASE v2.1.4 · hash=a3f92b1c · backtest=PASS · risk=APPROVED</span>
+        <span class="audit-hash">#a3f92b1c</span>
+      </div>
+      <div class="audit-line">
+        <span class="audit-ts">2025-03-04 08:55:12</span>
+        <span class="audit-actor">BACKTEST_AGENT</span>
+        <span class="audit-action">WALK_FORWARD_PASS STR-0041 v2.1.4 · Sharpe=1.34 · MaxDD=8.3%</span>
+        <span class="audit-hash">#wf-0041-v4</span>
+      </div>
+      <div class="audit-line">
+        <span class="audit-ts">2025-03-04 08:20:07</span>
+        <span class="audit-actor">RISK_MANAGER</span>
+        <span class="audit-action">RISK_ENVELOPE_APPROVED STR-0041 · lots=0.02 · SL=ATR×1.5 · max_hold=4h</span>
+        <span class="audit-hash">#risk-env-814</span>
+      </div>
+      <div class="audit-line">
+        <span class="audit-ts">2025-02-08 14:33:28</span>
+        <span class="audit-actor">BACKTEST_AGENT</span>
+        <span class="audit-action">WALK_FORWARD_FAIL STR-0044 v2.1.1-rc · OOS_Sharpe=-0.31 · DEPLOYMENT_BLOCKED</span>
+        <span class="audit-hash">#wf-0044-rej</span>
+      </div>
+      <div class="audit-line">
+        <span class="audit-ts">2025-02-08 13:55:01</span>
+        <span class="audit-actor">GOVERNANCE_AGENT</span>
+        <span class="audit-action">DEPLOYMENT_BLOCKED v2.1.1-rc · reason=WalkForwardFail · rollback_plan=v2.1.0</span>
+        <span class="audit-hash">#blk-0044</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     PAGE: DOCS
+═══════════════════════════════════ -->
+<div class="page" id="page-docs">
+  <div class="page-wrap">
+    <div class="page-hero">
+      <div class="page-hero-badge">System Manual · Reference Documentation</div>
+      <h2>SYSTEM<br>MANUAL</h2>
+      <p>Complete reference documentation for the AI Forex Agent Desk. Architecture, loop mechanics, build order, agent dictionary, glossary, and FAQ.</p>
+    </div>
+
+    <div class="docs-layout">
+      <div class="docs-nav">
+        <div class="docs-nav-title">Contents</div>
+        <a class="docs-nav-link active" href="#architecture">Architecture</a>
+        <a class="docs-nav-link" href="#loops">The Two Loops</a>
+        <a class="docs-nav-link" href="#gates">Safety Gates</a>
+        <a class="docs-nav-link" href="#buildorder">Build Order</a>
+        <a class="docs-nav-link" href="#dictionary">Agent Dictionary</a>
+        <a class="docs-nav-link" href="#glossary">Glossary</a>
+        <a class="docs-nav-link" href="#faq">FAQ</a>
+        <a class="docs-nav-link" href="#technical">Technical Notes</a>
+      </div>
+
+      <div class="docs-content">
+        <div class="doc-section" id="architecture">
+          <h3>Architecture Overview</h3>
+          <p>The AI Forex Agent Desk is a <strong>multi-agent trading system</strong> built with CrewAI. It consists of 11 specialized agents organized into two operating loops, coordinated by a central Orchestrator.</p>
+          <div class="doc-highlight">
+            The system embodies one core principle: <strong>edge must be earned before it can be operated.</strong> The Research Loop earns edge through rigorous validation. The Trading Loop deploys only proven, approved strategies within defined risk limits.
+          </div>
+          <p>No agent acts autonomously. Every significant action flows through the <strong>Orchestrator</strong>, which acts as the system's central nervous system — coordinating, approving, and logging all inter-agent communications.</p>
+          <p>The system is deliberately <strong>not a YOLO trading bot.</strong> It is a disciplined, auditable, reproducible system designed to survive the market long-term rather than optimize for short-term returns.</p>
+        </div>
+
+        <div class="doc-section" id="loops">
+          <h3>The Two Loops</h3>
+          <p><strong>Loop A — Research Loop</strong> is an offline, non-real-time process. Its job is to generate and validate trading strategies. It runs continuously in the background, processing hypotheses, running backtests, and passing validated strategies to the Trading Loop.</p>
+          <p>The Research Loop involves: the Data Engineer (clean data), Alpha Research (idea generation), Backtest & Validation (proof of edge), Risk Manager (position sizing and envelope), and Governance (sign-off and version control).</p>
+          <p><strong>Loop B — Trading Loop</strong> is the live, real-time operational layer. It takes only pre-approved, governance-signed strategies and executes them within the defined risk envelope. No strategy enters this loop without a version hash and Governance sign-off.</p>
+          <p>The Trading Loop involves: the Orchestrator (coordination), Regime Agent (market classification), Execution Agent (broker orders), Trade Management (position management), Monitoring (real-time surveillance), and Reporting (end-of-day summary).</p>
+        </div>
+
+        <div class="doc-section" id="gates">
+          <h3>Safety Gates</h3>
+          <p>The system has four primary safety gates that must all be satisfied before a strategy can trade live.</p>
+          <p><strong>Gate 1 — Backtest Validation:</strong> Walk-forward test must pass on unseen data. In-sample performance is necessary but not sufficient. Out-of-sample survival is required.</p>
+          <p><strong>Gate 2 — Risk Envelope:</strong> The Risk Manager must define an approved lot size, stop-loss method, maximum hold time, and daily exposure limit for every strategy before it can trade.</p>
+          <p><strong>Gate 3 — Governance Sign-off:</strong> The Governance Agent must issue a signed release with version hash, change summary, backtest results, and a rollback plan. No exceptions.</p>
+          <p><strong>Gate 4 — Regime Clearance:</strong> Before each trade session, the Regime Agent must issue a TRADE_ALLOWED flag. If conditions are hostile (high spread, news risk, adverse regime), no trades execute that session.</p>
+          <div class="doc-highlight">
+            All four gates must be cleared. A strategy that passes three of four does not trade. There are no partial approvals.
+          </div>
+        </div>
+
+        <div class="doc-section" id="buildorder">
+          <h3>Build Order</h3>
+          <p>The recommended build order reflects a dependency hierarchy. Build the foundation before adding intelligence. Never add a higher-level agent before the agents it depends on are tested and working.</p>
+          <p><strong>Step 1 — Data Engineer:</strong> Nothing else works without clean, versioned data. Build this first and stress-test it aggressively.</p>
+          <p><strong>Step 2 — Backtest Agent:</strong> Build the judge before building the ideas. This ensures honest evaluation from the start.</p>
+          <p><strong>Step 3 — Risk Manager:</strong> Define risk parameters before you ever consider execution. Risk is not an afterthought.</p>
+          <p><strong>Step 4 — Execution Agent:</strong> Paper-trade and test thoroughly before going live. Handle requotes, broker rejections, and partial fills.</p>
+          <p><strong>Step 5 — Monitoring:</strong> Set up Telegram alerts before going live with a single cent. Silent failures are more dangerous than noisy ones.</p>
+          <p><strong>Step 6+ — All Others:</strong> Alpha Research, Regime Agent, Trade Management, Governance, and Reporting can be added incrementally once the foundation is solid.</p>
+        </div>
+
+        <div class="doc-section" id="dictionary">
+          <h3>Agent Dictionary</h3>
+          <p>A quick reference for all 11 agents and their primary function in the system.</p>
+          <div class="glossary-grid">
+            <div class="glossary-term"><div>Orchestrator</div><div>Central coordinator. Routes information between all agents. Issues daily trading plans, approves execution orders, and triggers emergency protocols.</div></div>
+            <div class="glossary-term"><div>Data Engineer</div><div>Builds and maintains the clean, versioned gold dataset. Handles ingestion, quality checks, normalization, and gap detection.</div></div>
+            <div class="glossary-term"><div>Regime Agent</div><div>Classifies current market conditions (trend, chop, volatile, news risk). Issues TRADE_ALLOWED or STAND_DOWN flags before each session.</div></div>
+            <div class="glossary-term"><div>Alpha Research</div><div>Generates trading hypotheses from regime data and pattern analysis. Feeds the backtest pipeline.</div></div>
+            <div class="glossary-term"><div>Backtest & Validation</div><div>Tests strategies on historical data. Applies walk-forward testing, stress testing, and parameter sensitivity. Intentionally harsh.</div></div>
+            <div class="glossary-term"><div>Risk Manager</div><div>Calculates position sizes, enforces loss limits, defines risk envelopes, and triggers kill-switch when limits are breached.</div></div>
+            <div class="glossary-term"><div>Execution Agent</div><div>Places orders via MT5 Python API. Handles spread checks, requotes, partial fills, retry logic, and fill confirmation.</div></div>
+            <div class="glossary-term"><div>Trade Management</div><div>Manages open positions from entry to exit. Applies trailing stops, time stops, partial profits, and ATR-dynamic adjustments.</div></div>
+            <div class="glossary-term"><div>Monitoring Agent</div><div>Real-time system surveillance. Watches data feeds, PnL deviation, spread, and broker connection. Can halt trading unilaterally.</div></div>
+            <div class="glossary-term"><div>Governance Agent</div><div>Change management and audit trail. Signs off on all strategy deployments with version hash, test results, and rollback plan.</div></div>
+            <div class="glossary-term"><div>Reporting Agent</div><div>Produces weekly PM-style reports summarizing performance, regime context, risk events, and research progress.</div></div>
+          </div>
+        </div>
+
+        <div class="doc-section" id="glossary">
+          <h3>Glossary</h3>
+          <div class="glossary-grid">
+            <div class="glossary-term"><div>Walk-Forward</div><div>Out-of-sample validation method. Train on period A, test on period B, verify the strategy didn't just memorize noise.</div></div>
+            <div class="glossary-term"><div>Kill-Switch</div><div>Emergency halt mechanism. Triggered by the Monitoring Agent or Risk Manager when hard limits are breached. Closes or protects all positions.</div></div>
+            <div class="glossary-term"><div>Risk Envelope</div><div>The set of approved parameters for a live strategy: lot size, stop-loss method, max hold time, and daily exposure cap.</div></div>
+            <div class="glossary-term"><div>Regime</div><div>The current market state: trending, range-bound, high-volatility, or news-driven. Different strategies work in different regimes.</div></div>
+            <div class="glossary-term"><div>Version Hash</div><div>A unique identifier for each deployed strategy version. Ensures reproducibility — same hash should produce same results.</div></div>
+            <div class="glossary-term"><div>Expectancy</div><div>Expected profit per trade, in multiples of the risk (R). A positive expectancy over many trades is the definition of edge.</div></div>
+            <div class="glossary-term"><div>Gold Dataset</div><div>The master clean data file used by all agents. Versioned, timestamped, quality-checked. Single source of truth for all analysis.</div></div>
+            <div class="glossary-term"><div>ATR</div><div>Average True Range. Used to normalize stop-loss sizes, position sizes, and volatility-regime detection across instruments.</div></div>
+          </div>
+        </div>
+
+        <div class="doc-section" id="faq">
+          <h3>FAQ</h3>
+          <div class="faq-item">
+            <div class="faq-q">Why does the system kill 90–99% of strategy ideas?</div>
+            <div class="faq-a">Because most "edges" are statistical illusions. The backtest and walk-forward process is designed to be harder than the market itself. A strategy that survives this pipeline has earned the right to trade real capital.</div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-q">Can any agent override the Risk Manager?</div>
+            <div class="faq-a">No. Risk Manager decisions are final and cannot be overridden by Alpha Research, Execution Agent, or even the Orchestrator for hard limit enforcement. Signal strength is irrelevant when the risk budget is exhausted.</div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-q">What happens after a kill-switch event?</div>
+            <div class="faq-a">The system enters a locked state. Trading is suspended. Governance creates a mandatory post-mortem incident report. The human operator must review the report and sign off on a restart before any new trades can execute.</div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-q">Why does Build Order matter?</div>
+            <div class="faq-a">Dependencies. The Execution Agent depends on the Risk Manager for lot sizes. The Risk Manager depends on the Data Engineer for current ATR. The Governance Agent depends on the Backtest Agent for validation results. Build in dependency order to avoid untestable components.</div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-q">How often does the Research Loop run?</div>
+            <div class="faq-a">Continuously, but with different cadences per stage. Hypothesis generation runs daily on new regime data. Quick screens run hourly. Full backtests run overnight. Walk-forward tests are queued and run during off-market hours to avoid compute contention with live trading.</div>
+          </div>
+        </div>
+
+        <div class="doc-section" id="technical">
+          <h3>Technical Notes &amp; Assumptions</h3>
+          <p><strong>Broker:</strong> MetaTrader 5 (MT5) with Python API. All execution uses the `mt5` Python library. Orders include stop-loss and take-profit at placement time — no naked positions.</p>
+          <p><strong>Framework:</strong> CrewAI for agent orchestration. Each agent is defined with role, goal, backstory, tools, and allow_delegation settings. The Orchestrator has delegation enabled; all other agents do not.</p>
+          <p><strong>Data:</strong> All analysis uses a versioned, locally-stored gold dataset. No agent fetches raw data directly — all data comes through the Data Engineer's validated pipeline. Reproducibility requires locking both the data version and random seed.</p>
+          <p><strong>Instruments:</strong> Primary instruments are XAUUSD and USDJPY. GBPUSD is in the research pipeline. The system is designed for 2–5 instruments, not broad portfolio coverage.</p>
+          <p><strong>Position Sizing:</strong> Fixed-fractional risk model. 1% of current equity per trade, calculated from live ATR and instrument pip value. Recalculated fresh for every execution.</p>
+          <div class="doc-highlight">
+            This system is built for disciplined, reproducible, institutional-quality operation. The goal is not to maximize return — it is to survive and compound long-term through risk-adjusted excellence.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// PAGE NAVIGATION
+// ═══════════════════════════════════════════
+function showPage(pageId) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+
+  const page = document.getElementById('page-' + pageId);
+  if (page) {
+    page.classList.add('active');
+    window.scrollTo(0, 0);
+  }
+
+  const link = document.querySelector(`.nav-link[data-page="${pageId}"]`);
+  if (link) link.classList.add('active');
+
+  // Lazy init
+  if (pageId === 'workflow' && !workflowInit) {
+    initWorkflow();
+    workflowInit = true;
+  }
+  if (pageId === 'agents' && !agentsInit) {
+    initAgents();
+    agentsInit = true;
+  }
+}
+
+let workflowInit = false;
+let agentsInit = false;
+
+// ═══════════════════════════════════════════
+// AGENTS DATA
+// ═══════════════════════════════════════════
+const AGENTS_DATA = [
+  {
+    id: 0, role: 'Coordinator', name: 'Orchestrator',
+    tagline: '"The conductor — no agent acts without its knowledge"',
+    color: 'var(--c1)',
+    goal: 'Coordinate all 11 agents into a coherent, disciplined system. The Orchestrator is the single point of authority for issuing trading plans, approving execution orders, routing inter-agent communication, and triggering emergency protocols.',
+    inputs: ['Daily regime brief from Regime Agent','Validated strategy list from Governance Agent','Risk envelope from Risk Manager','Trade fill receipts from Execution Agent','Incident alerts from Monitoring Agent'],
+    actions: ['Issue daily trading plan at 08:15 UTC','Verify all 4 gate conditions before approving any execution','Route research results to appropriate agents','Trigger emergency protocol on kill-switch receipt','Log all inter-agent communication'],
+    outputs: ['Daily execution plan (pairs, strategies, size limits, blackouts)','Execution approval (with risk envelope attached)','Emergency halt instruction','Agent task assignments'],
+    tools: ['CrewAI task delegation','Agent communication bus','Incident log writer'],
+    crewai: `orchestrator = <span class="code-class">Agent</span>(
+  <span class="code-param">role</span>=<span class="code-string">'Chief Trading Orchestrator'</span>,
+  <span class="code-param">goal</span>=<span class="code-string">'Coordinate all 11 agents. Route information, '
+        'approve execution, enforce gate logic.'</span>,
+  <span class="code-param">backstory</span>=<span class="code-string">'Believes a system without coordination '
+            'is just 11 agents running amok.'</span>,
+  <span class="code-param">allow_delegation</span>=<span class="code-value">True</span>,
+  <span class="code-param">verbose</span>=<span class="code-value">True</span>
+)`,
+    warning: 'The Orchestrator is not a decision-maker for trading — that role belongs to the validated strategies and risk rules. The Orchestrator enforces process. It checks that gates are cleared, not whether the market looks good.',
+    tags: ['Central Hub', 'Both Loops', 'Gate Enforcer', 'delegation=True']
+  },
+  {
+    id: 1, role: 'Data', name: 'Data Engineer Agent',
+    tagline: '"Garbage in, garbage out — the foundation everything else rests on"',
+    color: 'var(--c2)',
+    goal: 'Build and maintain a clean, versioned gold dataset that all other agents can trust. Without reliable data, every other agent produces unreliable output. This agent is the least glamorous but the most foundational.',
+    inputs: ['Raw OHLCV data from broker feed (MT5)', 'Economic calendar (high-impact events)', 'Instrument specifications (pip value, min lot, spread baseline)', 'Swap rates and broker fees'],
+    actions: ['Pull daily OHLCV bars and validate quality', 'Detect and flag gaps, anomalous candles, weekend errors', 'Normalize spread baselines by session', 'Version-stamp the gold dataset with date + quality hash', 'Alert if data quality falls below threshold'],
+    outputs: ['Versioned gold dataset (CSV or parquet)', 'Data quality report (gap count, anomaly list)', 'Spread baseline by instrument and session', 'Dataset version hash for reproducibility'],
+    tools: ['MetaTrader5 Python API', 'pandas / numpy for normalization', 'Custom quality checker', 'Version control writer'],
+    crewai: `data_engineer = <span class="code-class">Agent</span>(
+  <span class="code-param">role</span>=<span class="code-string">'Data Pipeline Engineer'</span>,
+  <span class="code-param">goal</span>=<span class="code-string">'Deliver clean, versioned, quality-checked data. '
+        'Every other agent depends on your output.'</span>,
+  <span class="code-param">backstory</span>=<span class="code-string">'Has seen "great strategies" fail because '
+            'they were tested on corrupted data.'</span>,
+  <span class="code-param">tools</span>=[mt5_data_fetcher, quality_checker, version_writer],
+  <span class="code-param">allow_delegation</span>=<span class="code-value">False</span>,
+  <span class="code-param">verbose</span>=<span class="code-value">True</span>
+)`,
+    warning: 'Build this agent first, before anything else. Test it obsessively. A single corrupt candle in your backtest data can make a losing strategy look profitable. The gold dataset is your single source of truth.',
+    tags: ['Loop A', 'Priority #1', 'Foundation', 'Quality Gate']
+  },
+  {
+    id: 2, role: 'Market Intelligence', name: 'Regime Agent',
+    tagline: '"Don\'t trade in all weather — know when to sit on your hands"',
+    color: 'var(--c3)',
+    goal: 'Classify the current market regime before any trading session begins. Trading in the wrong regime is the fastest way to lose money with a technically valid strategy. This agent acts as the session gatekeeper.',
+    inputs: ['Gold dataset (recent OHLCV bars)', 'Economic calendar (high-impact events for the day)', 'Current spread readings', 'ATR percentile rank (recent vs historical volatility)'],
+    actions: ['Classify regime: trending / range-bound / high-volatility / no-trade', 'Check economic calendar and set blackout windows', 'Measure current spread vs baseline — flag if elevated', 'Issue TRADE_ALLOWED or STAND_DOWN flag for each instrument'],
+    outputs: ['Regime classification (with confidence score)', 'TRADE_ALLOWED / STAND_DOWN flag per instrument', 'Blackout windows (time ranges to avoid)', 'Daily regime brief for Orchestrator'],
+    tools: ['ADX + ATR regime classifier', 'Economic calendar scraper', 'Spread monitor', 'Regime confidence scorer'],
+    crewai: `regime_agent = <span class="code-class">Agent</span>(
+  <span class="code-param">role</span>=<span class="code-string">'Market Regime Classifier'</span>,
+  <span class="code-param">goal</span>=<span class="code-string">'Classify current conditions. Issue TRADE_ALLOWED '
+        'or STAND_DOWN. Never let the system trade in hostile conditions.'</span>,
+  <span class="code-param">backstory</span>=<span class="code-string">'Learned that the same strategy can return '
+            '+2.1 Sharpe in trend and -0.8 in chop.'</span>,
+  <span class="code-param">tools</span>=[regime_classifier, calendar_checker, spread_monitor],
+  <span class="code-param">allow_delegation</span>=<span class="code-value">False</span>,
+  <span class="code-param">verbose</span>=<span class="code-value">True</span>
+)`,
+    warning: 'STAND_DOWN is not failure. It is discipline. Design your regime rules to be conservative — it is better to miss a good trade than to get wrecked in a hostile environment you should have identified.',
+    tags: ['Loop B', 'Session Gate', 'Regime Filter', 'TRADE_ALLOWED']
+  },
+  {
+    id: 3, role: 'Research', name: 'Alpha Research Agent',
+    tagline: '"Idea factory — generates hypotheses for the backtest grinder to validate"',
+    color: 'var(--c4)',
+    goal: 'Generate a steady stream of well-formed trading hypotheses based on regime analysis, pattern recognition, and cross-instrument correlation. This agent does not validate — it hypothesizes. Quality is about diversity and logic, not cherry-picking.',
+    inputs: ['Recent regime history (which regimes were active and when)', 'Current gold dataset (patterns, correlations)', 'List of previously rejected ideas (to avoid duplication)', 'Research backlog from previous periods'],
+    actions: ['Analyze recent regime data for recurring patterns', 'Generate 5-20 new hypotheses per research cycle', 'Score each hypothesis on logical coherence and prior evidence', 'Format hypotheses for Backtest Agent consumption', 'Document rationale for each idea'],
+    outputs: ['Hypothesis queue (agent name, pair, timeframe, logic, entry/exit rules)', 'Hypothesis rationale document', 'Research backlog update', 'Ideas-generated count for Reporting Agent'],
+    tools: ['Pattern scanner (technical analysis toolkit)', 'Correlation matrix calculator', 'LLM hypothesis generator (Claude)', 'Idea deduplication checker'],
+    crewai: `alpha_research_agent = <span class="code-class">Agent</span>(
+  <span class="code-param">role</span>=<span class="code-string">'Alpha Research Analyst'</span>,
+  <span class="code-param">goal</span>=<span class="code-string">'Generate diverse, logical trading hypotheses. '
+        'Feed the backtest pipeline. Do not pre-filter by gut feel.'</span>,
+  <span class="code-param">backstory</span>=<span class="code-string">'Understands that 95% of ideas fail in backtest '
+            'and plans accordingly — volume with quality.'</span>,
+  <span class="code-param">tools</span>=[pattern_scanner, correlation_calc, hypothesis_generator],
+  <span class="code-param">allow_delegation</span>=<span class="code-value">False</span>,
+  <span class="code-param">verbose</span>=<span class="code-value">True</span>
+)`,
+    warning: 'Do not pre-filter too aggressively here. Some of the best strategies have non-obvious logic. Let the Backtest Agent be the judge. Your job is to generate plausible hypotheses — not to predict which ones will survive.',
+    tags: ['Loop A', 'Hypothesis Generator', 'LLM-Powered', 'Research Queue']
+  },
+  {
+    id: 4, role: 'Validation', name: 'Backtest & Validation Agent',
+    tagline: '"The harsh judge — kills most ideas, and that is the point"',
+    color: 'var(--c5)',
+    goal: 'Test every strategy hypothesis with maximum rigor. This agent is intentionally harsh. A PASS from this agent means the strategy has survived both in-sample and out-of-sample evaluation across multiple regimes. A FAIL is not a failure of the system — it is the system working correctly.',
+    inputs: ['Strategy hypothesis from Alpha Research Agent', 'Gold dataset (with data version hash)', 'Risk parameters from Risk Manager (min Sharpe, max drawdown thresholds)', 'Historical regime labels for OOS period selection'],
+    actions: ['Run in-sample backtest with minimum 100 trades', 'Apply walk-forward validation on 6 unseen regime periods', 'Perform parameter sensitivity analysis (±20% range)', 'Run stress test scenarios: 2020 crash, 2022 rate shock, low-liquidity', 'Calculate: Sharpe, Sortino, max drawdown, win rate, expectancy, profit factor'],
+    outputs: ['PASS / FAIL verdict with full statistics table', 'Walk-forward equity curve', 'Sensitivity heatmap (which parameters are fragile)', 'Rejection reason if FAIL (overfit / insufficient trades / regime-dependent)', 'Reproducibility package (data hash + seed + code version)'],
+    tools: ['vectorbt or custom pandas backtester', 'Walk-forward test framework', 'Parameter sensitivity scanner', 'Stress test runner'],
+    crewai: `backtest_agent = <span class="code-class">Agent</span>(
+  <span class="code-param">role</span>=<span class="code-string">'Strategy Backtesting & Validation'</span>,
+  <span class="code-param">goal</span>=<span class="code-string">'Test every strategy with maximum rigor. '
+        'Issue clear PASS or FAIL verdicts. Reject overfitted ideas mercilessly.'</span>,
+  <span class="code-param">backstory</span>=<span class="code-string">'Believes that a strategy that cannot survive '
+            'walk-forward testing was never real to begin with.'</span>,
+  <span class="code-param">tools</span>=[backtester, walk_forward_tester, sensitivity_scanner, stress_tester],
+  <span class="code-param">allow_delegation</span>=<span class="code-value">False</span>,
+  <span class="code-param">verbose</span>=<span class="code-value">True</span>
+)`,
+    warning: 'The minimum bar should feel uncomfortably high. If 30% of your strategies are passing, your bar is too low. A 2-5% pass rate means you are being honest. Survivorship bias is the enemy — always test out-of-sample.',
+    tags: ['Loop A', 'Priority #2', 'Gate 1', 'Walk-Forward', 'Harsh Judge']
+  },
+  {
+    id: 5, role: 'Risk', name: 'Risk Manager Agent',
+    tagline: '"The unconditional guardian — signal strength is irrelevant without approval"',
+    color: 'var(--c6)',
+    goal: 'Define and enforce the risk envelope for every strategy and every trading session. Risk decisions are final and cannot be overridden by any other agent. A validated strategy without risk approval cannot trade.',
+    inputs: ['Current account equity (live from MT5)', 'Live ATR for each instrument', 'Open position exposure', 'Daily PnL so far today', 'Strategy risk parameters from backtest results'],
+    actions: ['Calculate position size from 1% equity rule + live ATR', 'Verify daily loss budget is not exhausted', 'Check correlated exposure caps before approving each trade', 'Issue KILL_SWITCH or REDUCE_EXPOSURE on limit breach', 'Recalibrate size every 15 minutes during trading hours'],
+    outputs: ['Risk envelope per strategy (lot size, SL method, max hold)', 'Trade approval or rejection with reason', 'KILL_SWITCH command (if limit breached)', 'REDUCE_EXPOSURE instruction (if soft limit hit)', 'Updated daily risk report'],
+    tools: ['MT5 equity reader', 'ATR calculator', 'Position size formula engine', 'Correlation exposure calculator', 'Kill-switch writer'],
+    crewai: `risk_manager = <span class="code-class">Agent</span>(
+  <span class="code-param">role</span>=<span class="code-string">'Portfolio Risk Manager'</span>,
+  <span class="code-param">goal</span>=<span class="code-string">'Protect the account. Calculate position sizes. '
+        'Enforce hard and soft limits without exception.'</span>,
+  <span class="code-param">backstory</span>=<span class="code-string">'Has watched "just one more trade" destroy '
+            'months of gains. Risk is not negotiable.'</span>,
+  <span class="code-param">tools</span>=[equity_reader, atr_calc, position_sizer, kill_switch_writer],
+  <span class="code-param">allow_delegation</span>=<span class="code-value">False</span>,
+  <span class="code-param">verbose</span>=<span class="code-value">True</span>
+)`,
+    warning: 'Build this before you build the Execution Agent. Define your hard limits before you can trade a single cent. The risk envelope must be in place before any live order is possible. Risk is not an add-on — it is the system.',
+    tags: ['Both Loops', 'Priority #3', 'Gate 2', 'Kill Switch', 'Non-Override']
+  },
+  {
+    id: 6, role: 'Execution', name: 'Execution Agent',
+    tagline: '"Translates approved signals into real broker orders with full error handling"',
+    color: 'var(--c7)',
+    goal: 'Place orders via the MT5 Python API with complete error handling, retry logic, and fill confirmation. An order that is placed without confirming the stop-loss is a naked position. An order that fails silently is a silent failure — the worst kind.',
+    inputs: ['Execution order from Orchestrator (with risk envelope)', 'Current spread reading', 'MT5 connection status', 'Broker order limits and constraints'],
+    actions: ['Run pre-trade spread check against baseline', 'Submit order via MT5 API with SL and TP defined', 'Handle requotes, partial fills, and broker rejections with retry', 'Confirm SL and TP are set on the fill', 'Log fill price, slippage, commission, and timestamp'],
+    outputs: ['Fill receipt (price, slippage, commission, ticket number)', 'Order rejection with reason and retry count', 'Position confirmation with SL/TP verification', 'Execution log entry for Reporting Agent'],
+    tools: ['MetaTrader5 Python API (mt5.order_send)', 'Spread checker', 'Fill confirmation validator', 'Retry logic handler', 'Slippage calculator'],
+    crewai: `execution_agent = <span class="code-class">Agent</span>(
+  <span class="code-param">role</span>=<span class="code-string">'Trade Execution Specialist'</span>,
+  <span class="code-param">goal</span>=<span class="code-string">'Place orders cleanly. Handle all edge cases. '
+        'Confirm every fill. Never leave a naked position.'</span>,
+  <span class="code-param">backstory</span>=<span class="code-string">'Has seen orders placed without SL. '
+            'Now treats every fill as unconfirmed until SL is verified.'</span>,
+  <span class="code-param">tools</span>=[mt5_order_sender, spread_checker, fill_confirmer, retry_handler],
+  <span class="code-param">allow_delegation</span>=<span class="code-value">False</span>,
+  <span class="code-param">verbose</span>=<span class="code-value">True</span>
+)`,
+    warning: 'Paper trade for at least 2 weeks before going live. Verify your retry logic. Verify your SL confirmation. Verify your partial fill handling. A bug in the Execution Agent can lead to a naked leveraged position on a volatile instrument.',
+    tags: ['Loop B', 'Priority #4', 'MT5 API', 'Error Handling', 'Fill Confirm']
+  },
+  {
+    id: 7, role: 'Position Management', name: 'Trade Management Agent',
+    tagline: '"From fill to close — manages every moment a position is open"',
+    color: 'var(--c8)',
+    goal: 'Take over every open position from the moment of fill and manage it through to closure. Apply pre-defined rules for trailing stops, time stops, partial profits, and ATR-dynamic adjustments. No discretion. Every decision is rule-based.',
+    inputs: ['Position data from Execution Agent (fill price, SL, TP, lot size)', 'Live OHLCV stream for the position instrument', 'Current ATR reading', 'Risk envelope (max hold time, trailing stop parameters)'],
+    actions: ['Monitor ATR for dynamic stop adjustment during volatility spikes', 'Apply trailing stop once position reaches +1R profit', 'Execute partial profit take at predefined levels', 'Apply time stop if max hold period is exceeded', 'Execute emergency close on kill-switch instruction'],
+    outputs: ['Position update log (stop adjustments, partial exits)', 'Exit record (close price, hold time, PnL, exit reason)', 'Emergency close confirmation for kill-switch events'],
+    tools: ['MT5 position modifier (mt5.order_modify)', 'Trailing stop engine', 'Time stop checker', 'Partial profit executor'],
+    crewai: `trade_management_agent = <span class="code-class">Agent</span>(
+  <span class="code-param">role</span>=<span class="code-string">'Trade Management & Exit Specialist'</span>,
+  <span class="code-param">goal</span>=<span class="code-string">'Manage all open positions with rule-based precision. '
+        'No discretion. Every action is pre-defined.'</span>,
+  <span class="code-param">backstory</span>=<span class="code-string">'Watched discretionary management turn winners '
+            'into losers. Now follows rules exclusively.'</span>,
+  <span class="code-param">tools</span>=[position_modifier, trailing_stop_engine, time_stop_checker],
+  <span class="code-param">allow_delegation</span>=<span class="code-value">False</span>,
+  <span class="code-param">verbose</span>=<span class="code-value">True</span>
+)`,
+    warning: 'Define your exit rules in the backtest, not during a live trade. The moment you start "managing" a live position with discretion, you have invalidated your backtest. Rules exist precisely because humans make bad decisions under pressure.',
+    tags: ['Loop B', 'Position Lifecycle', 'Rule-Based', 'Trailing Stop', 'Exit Logic']
+  },
+  {
+    id: 8, role: 'Surveillance', name: 'Monitoring Agent',
+    tagline: '"The night watchman — silent failures are more dangerous than noisy ones"',
+    color: 'var(--c9)',
+    goal: 'Provide continuous real-time surveillance of the entire system. Detect silent failures, anomalies, and drift before they become catastrophic. Alert immediately via Telegram. Trigger kill-switch unilaterally when hard thresholds are breached — speed matters more than consensus.',
+    inputs: ['Live data feed timestamps (staleness check)', 'Live PnL vs backtest expectation range', 'Current spread vs baseline', 'MT5 connection status and latency'],
+    actions: ['Check data feed freshness every N minutes — alert if stale', 'Monitor live PnL vs backtested expectation range', 'Detect spread spikes and pause trading immediately', 'Watch for MT5 connection drops', 'Alert if drawdown exceeds 50% of daily loss limit', 'Trigger kill-switch if any hard threshold is breached'],
+    outputs: ['Real-time system health dashboard (green/yellow/red)', 'Incident alerts (Telegram/email notification)', 'Kill-switch trigger (with position safety check)', 'Incident ticket with timestamp, trigger, context', 'Daily health summary report'],
+    tools: ['Telegram Bot API', 'MT5 connection checker', 'PnL deviation detector', 'Data freshness validator', 'Kill-switch writer'],
+    crewai: `monitoring_agent = <span class="code-class">Agent</span>(
+  <span class="code-param">role</span>=<span class="code-string">'System Monitoring & Incident Response'</span>,
+  <span class="code-param">goal</span>=<span class="code-string">'Detect silent failures, anomalies, and drift. '
+        'Alert immediately. Trigger kill-switch when needed.'</span>,
+  <span class="code-param">backstory</span>=<span class="code-string">'Watched a system trade on a frozen feed for 3h. '
+            'Now treats every silent failure as an emergency.'</span>,
+  <span class="code-param">tools</span>=[data_freshness_checker, pnl_monitor, spread_alerter, telegram_notifier, kill_switch_writer],
+  <span class="code-param">allow_delegation</span>=<span class="code-value">False</span>,
+  <span class="code-param">verbose</span>=<span class="code-value">True</span>
+)`,
+    warning: 'Set up Telegram alerts before you go live with a single cent. You need to know within seconds if something goes wrong. Silent failures in automated trading are far more dangerous than noisy ones. This agent is not optional.',
+    tags: ['Loop B', 'Priority #5', 'Alerts', 'Kill Switch', '24/7']
+  },
+  {
+    id: 9, role: 'Compliance', name: 'Governance & Audit Agent',
+    tagline: '"Prevents you from shooting yourself in the foot with unvetted changes"',
+    color: 'var(--c10)',
+    goal: 'Enforce version control and change management for the entire trading system. The most dangerous moment is a "small tweak" deployed without re-validation. This agent acts as the internal auditor — no change without a validation cycle.',
+    inputs: ['Code diffs (any change to strategy logic, prompts, or config)', 'Backtest validation results for the changed version', 'Configuration change log', 'Deployment request from Orchestrator'],
+    actions: ['Diff new version against previous version', 'Require Backtest PASS for any strategy logic change', 'Block deployment if change is not reproducible', 'Sign off on releases with version hash + test results', 'Maintain rollback plan to previous stable version', 'Generate plain-English release notes'],
+    outputs: ['Signed release notes (version hash, change summary, test results)', 'Deployment approval or rejection with reasoning', 'Rollback plan (previous stable version reference)', 'Full audit trail (who changed what, when, why)', 'Reproducibility certification'],
+    tools: ['Git diff reader', 'Validation result reader', 'Version manifest writer', 'Audit log appender'],
+    crewai: `governance_agent = <span class="code-class">Agent</span>(
+  <span class="code-param">role</span>=<span class="code-string">'Trading System Governance & Auditor'</span>,
+  <span class="code-param">goal</span>=<span class="code-string">'Enforce change management. Block unvalidated deployments. '
+        'Maintain full audit trail and rollback capability.'</span>,
+  <span class="code-param">backstory</span>=<span class="code-string">'Saw a "minor config change" cause 15% drawdown. '
+            'Now requires sign-off on every change, no exceptions.'</span>,
+  <span class="code-param">tools</span>=[git_diff_reader, validation_result_reader, version_manifest_writer, audit_log_appender],
+  <span class="code-param">allow_delegation</span>=<span class="code-value">False</span>,
+  <span class="code-param">verbose</span>=<span class="code-value">True</span>
+)`,
+    warning: 'This feels bureaucratic until the day you accidentally deploy an untested strategy change and lose a week of profits in an hour. Build the habit of going through governance even when it feels slow. Slow here saves fast destruction later.',
+    tags: ['Loop A', 'Gate 3', 'Change Control', 'Audit Trail', 'Anti-Sabotage']
+  },
+  {
+    id: 10, role: 'Intelligence', name: 'Reporting Agent',
+    tagline: '"Weekly PM letter — makes the system legible to the human in charge"',
+    color: 'var(--c11)',
+    goal: 'Produce clear, actionable weekly reports that give the human operator a complete picture of what happened, why, and what should happen next. Translates machine logs into human-readable intelligence — the kind of report a portfolio manager would write.',
+    inputs: ['Full trade log for the period', 'Regime history (which regimes were active)', 'Risk events log (kill-switch triggers, limit breaches)', 'Research progress (what was tested, passed, failed)', 'System health incidents from Monitoring Agent'],
+    actions: ['Calculate period performance: PnL, Sharpe, drawdown, win rate', 'Summarize regime distribution for the period', 'Identify best and worst performing strategies', 'Flag risk events and their resolutions', 'Write "What worked, what failed, what changed" narrative', 'Propose 3-5 action items for next week'],
+    outputs: ['Weekly PM-style report (Markdown or PDF)', 'Performance dashboard summary', 'Risk event summary with resolution status', 'Research pipeline status', 'Next week action items'],
+    tools: ['Trade log reader', 'Performance metrics calculator (pandas)', 'Report template writer', 'LLM narrative generator (Claude)'],
+    crewai: `reporting_agent = <span class="code-class">Agent</span>(
+  <span class="code-param">role</span>=<span class="code-string">'Portfolio Reporting Analyst'</span>,
+  <span class="code-param">goal</span>=<span class="code-string">'Produce clear weekly PM-style reports: what happened, '
+        'why, and what to do next. Make the system legible.'</span>,
+  <span class="code-param">backstory</span>=<span class="code-string">'Believes a system you cannot understand is '
+            'a system you cannot trust. Logs become insight.'</span>,
+  <span class="code-param">tools</span>=[trade_log_reader, metrics_calculator, report_writer, llm_narrator],
+  <span class="code-param">allow_delegation</span>=<span class="code-value">False</span>,
+  <span class="code-param">verbose</span>=<span class="code-value">True</span>
+)`,
+    warning: 'Do not skip the weekly report because it feels like admin. It is your early warning system for strategy decay, risk creep, and regime shifts that happen too slowly to trigger alerts but fast enough to erode your edge.',
+    tags: ['Loop B', 'Human Interface', 'Weekly', 'LLM-Powered', 'Closes Loop']
+  }
+];
+
+function initAgents() {
+  const grid = document.getElementById('agentsGrid');
+  AGENTS_DATA.forEach(agent => {
+    const card = document.createElement('div');
+    card.className = 'agent-card';
+    card.setAttribute('data-id', agent.id);
+
+    card.innerHTML = `
+      <div class="agent-header" onclick="toggleAgent(${agent.id})">
+        <div class="agent-number">${String(agent.id).padStart(2,'0')}</div>
+        <div class="agent-meta">
+          <div class="agent-role" style="color:${agent.color}">${agent.role}</div>
+          <div class="agent-name">${agent.name}</div>
+          <div class="agent-tagline">${agent.tagline}</div>
+        </div>
+        <div class="agent-toggle">+</div>
+      </div>
+      <div class="agent-body">
+        <div class="agent-body-inner">
+          <div class="goal-block">
+            <div class="goal-label">// Mission Statement</div>
+            <div class="goal-text">${agent.goal}</div>
+          </div>
+          <div class="detail-grid">
+            <div class="detail-block db-inputs">
+              <div class="detail-block-label">Inputs</div>
+              <ul class="detail-list">${agent.inputs.map(i=>`<li>${i}</li>`).join('')}</ul>
+            </div>
+            <div class="detail-block db-outputs">
+              <div class="detail-block-label">Outputs</div>
+              <ul class="detail-list">${agent.outputs.map(o=>`<li>${o}</li>`).join('')}</ul>
+            </div>
+            <div class="detail-block db-actions">
+              <div class="detail-block-label">Actions</div>
+              <ul class="detail-list">${agent.actions.map(a=>`<li>${a}</li>`).join('')}</ul>
+            </div>
+            <div class="detail-block db-tools">
+              <div class="detail-block-label">Tools / Libraries</div>
+              <ul class="detail-list">${agent.tools.map(t=>`<li>${t}</li>`).join('')}</ul>
+            </div>
+          </div>
+          <div class="code-block-label">// CrewAI Definition Skeleton</div>
+          <div class="code-block"><pre>${agent.crewai}</pre></div>
+          <div class="agent-warning">
+            <span class="agent-warning-icon">⚠</span>
+            <span class="agent-warning-text">${agent.warning}</span>
+          </div>
+          <div class="tags-row">${agent.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+        </div>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+
+  setTimeout(() => toggleAgent(0), 300);
+}
+
+function toggleAgent(id) {
+  const card = document.querySelector(`.agent-card[data-id="${id}"]`);
+  if (!card) return;
+  const isOpen = card.classList.contains('open');
+  document.querySelectorAll('.agent-card').forEach(c => c.classList.remove('open'));
+  if (!isOpen) card.classList.add('open');
+}
+
+// ═══════════════════════════════════════════
+// WORKFLOW / TOPOLOGY
+// ═══════════════════════════════════════════
+const AGENT_NODES = {
+  0: { name:'Orchestrator', role:'Central Coordinator', color:'var(--c1)',
+    receives:['Regime brief from Regime Agent','Validated strategies from Governance','Risk envelope from Risk Manager','Fill receipts from Execution Agent','Incident alerts from Monitoring Agent'],
+    sends:['Daily trading plan → All agents','Execution approval → Execution Agent','Emergency halt → Trade Management','Task assignments → Research agents'] },
+  1: { name:'Data Engineer', role:'Data Pipeline', color:'var(--c2)',
+    receives:['Raw OHLCV from MT5 feed','Economic calendar','Instrument specs','Broker swap rates'],
+    sends:['Versioned gold dataset → All agents','Data quality report → Orchestrator','Spread baseline → Risk Manager'] },
+  2: { name:'Regime Agent', role:'Market Intelligence', color:'var(--c3)',
+    receives:['Gold dataset from Data Engineer','Economic calendar','Current spread readings','ATR percentile data'],
+    sends:['TRADE_ALLOWED/STAND_DOWN → Orchestrator','Regime classification → Alpha Research','Blackout windows → Orchestrator'] },
+  3: { name:'Alpha Research', role:'Hypothesis Generator', color:'var(--c4)',
+    receives:['Regime history from Regime Agent','Gold dataset from Data Engineer','Rejected ideas list from Backtest Agent'],
+    sends:['Hypothesis queue → Backtest Agent','Research progress → Reporting Agent'] },
+  4: { name:'Backtest & Validation', role:'Strategy Validator', color:'var(--c5)',
+    receives:['Hypothesis queue from Alpha Research','Gold dataset from Data Engineer','Risk thresholds from Risk Manager'],
+    sends:['PASS/FAIL verdict → Orchestrator','Walk-forward results → Governance Agent','Rejection reasons → Alpha Research'] },
+  5: { name:'Risk Manager', role:'Risk Enforcer', color:'var(--c6)',
+    receives:['Live equity from MT5','Strategy parameters from Backtest Agent','Open position data','Daily PnL from Execution Agent'],
+    sends:['Risk envelope → Execution Agent','KILL_SWITCH → Orchestrator + Trade Management','Position size → Execution Agent'] },
+  6: { name:'Execution Agent', role:'Order Placement', color:'var(--c7)',
+    receives:['Execution order from Orchestrator','Risk envelope from Risk Manager','Current spread reading'],
+    sends:['Fill receipt → Trade Management + Monitoring','Rejection notice → Orchestrator','Slippage data → Reporting Agent'] },
+  7: { name:'Trade Management', role:'Position Lifecycle', color:'var(--c8)',
+    receives:['Position data from Execution Agent','Live OHLCV stream','Kill-switch instruction from Orchestrator'],
+    sends:['Exit record → Reporting + Execution Agent','Position update log → Monitoring Agent'] },
+  8: { name:'Monitoring Agent', role:'System Surveillance', color:'var(--c9)',
+    receives:['Live data feed timestamps','Live PnL data','MT5 connection status','Spread readings'],
+    sends:['KILL_SWITCH → Orchestrator (unilateral)','Incident alert → Human + Telegram','Health status → Orchestrator'] },
+  9: { name:'Governance & Audit', role:'Change Control', color:'var(--c10)',
+    receives:['Code diffs from development','Backtest results from Backtest Agent','Deployment requests from Orchestrator'],
+    sends:['Signed release notes → Orchestrator','Deployment approval/block → Orchestrator','Audit trail → Permanent log'] },
+  10: { name:'Reporting Agent', role:'Human Intelligence', color:'var(--c11)',
+    receives:['Trade log from Execution + Trade Management','Regime history from Regime Agent','Risk events from Risk Manager + Monitoring'],
+    sends:['Weekly PM report → Human operator','Performance dashboard → Human','Next week action items → Orchestrator'] }
+};
+
+const SCENARIOS = {
+  research: {
+    title: 'Research Loop — From Idea to Approved Strategy',
+    steps: [
+      { agent:'Data Engineer', action:'Pull & Version Daily Data', color:'var(--c2)',
+        desc:'The Data Engineer ingests overnight data, runs quality checks, fills detected gaps using VWAP adjustments, and stamps the gold dataset with a version hash. All subsequent agents in this cycle use this exact version — ensuring reproducibility.',
+        passes:'Versioned Gold Dataset → All Research Agents' },
+      { agent:'Alpha Research Agent', action:'Generate Strategy Hypotheses', color:'var(--c4)',
+        desc:'Using regime history, pattern analysis, and the gold dataset, the Alpha Research Agent generates 5-20 new hypotheses. Each hypothesis includes: instrument, timeframe, entry logic, exit logic, and the regime conditions under which it is expected to work.',
+        passes:'Hypothesis Queue → Backtest Agent' },
+      { agent:'Backtest & Validation', action:'In-Sample Backtest Run', color:'var(--c5)',
+        desc:'The Backtest Agent runs a full historical backtest on the training period. Minimum requirements: 100+ trades, Sharpe ≥ 0.8, max drawdown < 15%. Ideas that fail these thresholds are rejected immediately with documented reasons.',
+        passes:'IS PASS → Walk-Forward Stage', gate:'pass' },
+      { agent:'Backtest & Validation', action:'Walk-Forward Validation', color:'var(--c5)',
+        desc:'Surviving strategies are tested on 6 unseen regime periods. This is the harshest gate — it kills strategies that were overfit to training data. An out-of-sample Sharpe < 0.5 or significant equity curve deterioration results in immediate rejection.',
+        passes:'WF PASS → Risk Manager', gate:'pass' },
+      { agent:'Risk Manager Agent', action:'Define Risk Envelope', color:'var(--c6)',
+        desc:'For strategies that survive walk-forward testing, the Risk Manager calculates the approved risk envelope: lot size (based on 1% equity rule and ATR), stop-loss method (ATR multiple), maximum hold time, and daily exposure cap for this instrument.',
+        passes:'Risk Envelope → Governance Agent' },
+      { agent:'Governance Agent', action:'Sign Off & Version Lock', color:'var(--c10)',
+        desc:'The Governance Agent verifies the full package: validation passed, risk envelope defined, code is reproducible (same data version + seed = same result), and release notes are written. Only after Governance signs off can the strategy be deployed to the Trading Loop. This step cannot be skipped.',
+        passes:'Signed Release → Orchestrator', gate:'pass' }
+    ]
+  },
+  trading: {
+    title: 'Trading Loop — A Live Trade From Signal to Close',
+    steps: [
+      { agent:'Regime Agent', action:'Classify Current Market Conditions', color:'var(--c3)',
+        desc:'Before any trade is considered, the Regime Agent checks current conditions: Is the market trending or chopping? Is spread within normal range? Is there a high-impact news event in the next 30 minutes? It issues a TRADE_ALLOWED or STAND_DOWN flag. If conditions are hostile, no further steps execute.',
+        passes:'TRADE_ALLOWED flag → Orchestrator', gate:'pass' },
+      { agent:'Orchestrator', action:'Verify All Gate Conditions', color:'var(--c1)',
+        desc:'The Orchestrator confirms: (1) Regime says TRADE_ALLOWED, (2) The strategy has Governance sign-off, (3) Backtest marked it PASS, (4) Risk Manager has defined the current envelope. Only when ALL four conditions are met does it issue an execution order.',
+        passes:'Execution Order → Execution Agent + Risk Manager' },
+      { agent:'Risk Manager Agent', action:'Calculate Real-Time Position Size', color:'var(--c6)',
+        desc:'With actual current account equity, open position exposure, and live ATR, the Risk Manager calculates the exact lot size for this trade. It also verifies the daily loss budget has not been hit and that adding this trade does not create correlated overexposure.',
+        passes:'Risk Envelope (lot size, SL, max hold) → Execution Agent' },
+      { agent:'Execution Agent', action:'Place Order with Full Error Handling', color:'var(--c7)',
+        desc:'The Execution Agent does a final pre-trade spread check, then places the order via MT5 Python API. It handles requotes, partial fills, and broker rejections with retry logic. It confirms the stop loss and take profit are set correctly after fill, then logs actual fill price, slippage, and commission.',
+        passes:'Fill Receipt → Trade Management Agent + Monitoring' },
+      { agent:'Trade Management Agent', action:'Manage Position Until Exit', color:'var(--c8)',
+        desc:'Trade Management takes over. It applies trailing stop logic, monitors ATR for dynamic stop widening during volatility spikes, applies time stops if the trade exceeds its maximum hold period, and executes partial profits at predefined levels. Every decision is rule-based — no discretion.',
+        passes:'Exit Record → Reporting Agent + Execution Agent' },
+      { agent:'Monitoring Agent', action:'Watch for Anomalies Throughout', color:'var(--c9)',
+        desc:'Running in parallel throughout the entire trade lifecycle, the Monitoring Agent checks data feed freshness, watches PnL deviation vs backtest expectations, alerts on spread spikes, and monitors MT5 connection status. If any threshold is breached, it fires a kill-switch trigger immediately.',
+        passes:'Incident Alert → Human + Orchestrator (if triggered)' }
+    ]
+  },
+  risk: {
+    title: 'Risk Event — Kill-Switch Trigger Sequence',
+    steps: [
+      { agent:'Monitoring Agent', action:'Detect Anomaly', color:'var(--c9)',
+        desc:'The Monitoring Agent detects one of the following: account drawdown exceeded 50% of daily loss limit, live PnL is deviating >2 standard deviations from backtest expectations, data feed has not updated in 5+ minutes, spread is 4x normal, or MT5 connection has dropped.',
+        passes:'ANOMALY ALERT → Orchestrator + Risk Manager' },
+      { agent:'Risk Manager Agent', action:'Assess Breach Severity', color:'var(--c6)',
+        desc:'The Risk Manager evaluates: is this a soft limit (reduce size) or a hard limit (stop all trading)? If the daily loss limit is hit or a hard threshold is breached, it issues a KILL_SWITCH command. If it is a soft alert, it issues REDUCE_EXPOSURE instead.',
+        passes:'KILL_SWITCH or REDUCE_EXPOSURE → Orchestrator', gate:'block' },
+      { agent:'Orchestrator', action:'Execute Emergency Protocol', color:'var(--c1)',
+        desc:'Receiving the kill-switch command, the Orchestrator immediately: (1) Stops all pending signal generation, (2) Blocks new execution orders, (3) Instructs Trade Management to close or protect all open positions, (4) Notifies human operator, (5) Logs a full incident record.',
+        passes:'Emergency Exit Order → Trade Management + Execution' },
+      { agent:'Trade Management Agent', action:'Close or Protect Open Positions', color:'var(--c8)',
+        desc:'Trade Management receives the emergency instruction and immediately: tightens all stop losses to break-even or better, executes emergency closes where appropriate based on current spread conditions, and logs every action with reason code KILL_SWITCH.',
+        passes:'Position Closure Record → Monitoring + Governance' },
+      { agent:'Governance Agent', action:'Create Incident Report', color:'var(--c10)',
+        desc:'Governance logs the full incident: what triggered it, which thresholds were breached, what actions were taken, and what the final PnL impact was. It creates a mandatory post-mortem document and locks the system from resuming trading until the human operator reviews and signs off.',
+        passes:'Incident Report → Human Review · System Locked Until Sign-off', gate:'block' }
+    ]
+  },
+  full: {
+    title: 'Full System Day — Morning to Market Close',
+    steps: [
+      { agent:'Data Engineer', action:'07:00 — Daily Data Refresh', color:'var(--c2)',
+        desc:'Before London open, the Data Engineer pulls overnight data, updates the gold dataset, runs quality checks, and flags any weekend gaps or anomalous candles. It also updates spread baselines and checks broker swap rates. Output: fresh, versioned gold dataset stamped and ready for the day.',
+        passes:'Fresh Gold Dataset → All Agents' },
+      { agent:'Regime Agent', action:'08:00 — Morning Regime Assessment', color:'var(--c3)',
+        desc:'As London opens, the Regime Agent classifies current conditions: volatility regime, trend/chop state, spread environment, and news risk for the day. It checks the economic calendar for scheduled high-impact events and sets time-based trading blackout windows.',
+        passes:'Daily Regime Brief → Orchestrator' },
+      { agent:'Orchestrator', action:'08:15 — Issue Daily Trading Plan', color:'var(--c1)',
+        desc:'With fresh data and regime context, the Orchestrator reviews which validated strategies are permitted to run in today\'s regime, confirms the current risk envelope with Risk Manager, and issues the daily execution plan: which pairs, which strategies, what size limits, and what the blackout windows are.',
+        passes:'Daily Plan → All Agents' },
+      { agent:'Execution + Trade Mgmt', action:'08:30–16:00 — Active Trading Window', color:'var(--c7)',
+        desc:'During London and NY overlap, the Execution Agent processes signals from approved strategies within the risk envelope. Trade Management continuously monitors open positions, adjusts trailing stops, and manages partial exits. Monitoring watches everything in real-time, ready to intervene.',
+        passes:'Fill Receipts + Position Updates → Monitoring + Reporting' },
+      { agent:'Risk Manager Agent', action:'Throughout — Rolling Risk Checks', color:'var(--c6)',
+        desc:'Every 15 minutes during trading hours, the Risk Manager re-checks: current equity vs morning equity, daily PnL vs daily loss limit, open exposure vs correlation caps, and ATR changes that might require position size adjustments. It proactively reduces size if conditions deteriorate.',
+        passes:'Updated Risk Envelope → Orchestrator' },
+      { agent:'Alpha Research', action:'15:00 — Research Cycle Runs', color:'var(--c4)',
+        desc:'While trading winds down after the NY close, the Alpha Research Agent begins processing the research queue: generating new hypotheses, running preliminary analysis on recent regime data, and preparing strategy candidates for the Backtest Agent to evaluate overnight.',
+        passes:'Strategy Candidates → Backtest Agent (overnight run)' },
+      { agent:'Reporting Agent', action:'18:00 — End of Day Summary', color:'var(--c11)',
+        desc:'After market close, the Reporting Agent compiles the day\'s results: trade log, regime summary, risk events, research progress, and any incidents. It generates a clear end-of-day report for the human operator — what happened, what the system did, and what is queued for tomorrow.',
+        passes:'Daily Report → Human Operator · Next Day Plan → Orchestrator' }
+    ]
+  }
+};
+
+let currentScenario = 'research';
+
+function setScenario(name) {
+  currentScenario = name;
+  document.querySelectorAll('.scenario-btn').forEach(b => {
+    b.className = 'scenario-btn';
+  });
+  const activeBtn = document.querySelector(`.scenario-btn[data-scenario="${name}"]`);
+  if (activeBtn) activeBtn.classList.add('active-' + name);
+  renderSequence();
+}
+
+function renderSequence() {
+  const sc = SCENARIOS[currentScenario];
+  document.getElementById('seqTitle').textContent = sc.title;
+  const container = document.getElementById('seqSteps');
+  container.innerHTML = '';
+
+  sc.steps.forEach((step, i) => {
+    const el = document.createElement('div');
+    el.className = 'seq-step';
+    el.style.animationDelay = (i * 0.06) + 's';
+    el.innerHTML = `
+      <div class="seq-step-num-col">
+        <div class="seq-step-num" style="border-color:${step.color}; color:${step.color}">${i+1}</div>
+        <div class="seq-vline"></div>
+      </div>
+      <div class="seq-content">
+        <div class="seq-step-agent" style="color:${step.color}">${step.agent}</div>
+        <div class="seq-step-action">${step.action}</div>
+        <div class="seq-step-desc">${step.desc}</div>
+        <div class="seq-step-passes">
+          <span style="color:${step.color}; border-color:${step.color}">→ PASSES TO</span>
+          <span>${step.passes}</span>
+        </div>
+        ${step.gate === 'pass' ? '<div class="gate-badge pass">✓ VALIDATION GATE — MUST PASS TO CONTINUE</div>' : ''}
+        ${step.gate === 'block' ? '<div class="gate-badge block">⛔ HARD STOP — SYSTEM HALTS IF TRIGGERED</div>' : ''}
+      </div>
+    `;
+    container.appendChild(el);
+  });
+}
+
+function selectAgent(id) {
+  const a = AGENT_NODES[id];
+  if (!a) return;
+
+  // Highlight node
+  document.querySelectorAll('.agent-node').forEach(n => n.classList.remove('highlighted'));
+  const node = document.querySelector(`.an-${id}`);
+  if (node) node.classList.add('highlighted');
+
+  const detail = document.getElementById('agentDetail');
+  const placeholder = document.getElementById('infoPlaceholder');
+  placeholder.style.display = 'none';
+  detail.style.display = 'block';
+  detail.classList.add('animate-in');
+  setTimeout(() => detail.classList.remove('animate-in'), 400);
+
+  detail.innerHTML = `
+    <div class="detail-agent-name">${a.name}</div>
+    <div class="detail-agent-role" style="color:${a.color}">${a.role}</div>
+    <div class="detail-section">
+      <div class="detail-section-title">// Receives From</div>
+      ${a.receives.map(r => `<div class="detail-item">${r}</div>`).join('')}
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title" style="color:${a.color}">// Sends To</div>
+      ${a.sends.map(s => `
+        <div class="ws-row">
+          <div class="ws-dot" style="background:${a.color}"></div>
+          <div class="ws-text">${s}</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function initWorkflow() {
+  renderSequence();
+  setTimeout(() => selectAgent(0), 200);
+}
+
+// Draw connection lines on the topology SVG
+function drawConnections() {
+  const positions = {
+    0: {x:300, y:210}, 1:{x:105,y:68}, 2:{x:300,y:45},
+    3:{x:495,y:68}, 4:{x:558,y:210}, 5:{x:495,y:352},
+    6:{x:300,y:375}, 7:{x:105,y:352}, 8:{x:42,y:210},
+    9:{x:178,y:140}, 10:{x:422,y:140}
+  };
+  const connections = [
+    [0,1],[0,2],[0,3],[0,4],[0,5],[0,6],[0,7],[0,8],[0,9],[0,10],
+    [1,3],[1,2],[3,4],[4,9],[5,6],[6,7],[7,8],[8,0]
+  ];
+  const g = document.getElementById('connectLines');
+  connections.forEach(([a,b]) => {
+    const p1 = positions[a], p2 = positions[b];
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', p1.x); line.setAttribute('y1', p1.y);
+    line.setAttribute('x2', p2.x); line.setAttribute('y2', p2.y);
+    line.setAttribute('stroke', 'rgba(0,212,255,0.15)');
+    line.setAttribute('stroke-width', '1');
+    line.setAttribute('class', 'connect-line');
+    g.appendChild(line);
+  });
+}
+
+// Docs navigation
+document.querySelectorAll('.docs-nav-link').forEach(link => {
+  link.addEventListener('click', () => {
+    document.querySelectorAll('.docs-nav-link').forEach(l => l.classList.remove('active'));
+    link.classList.add('active');
+  });
+});
+
+// Init
+drawConnections();
+initAgents();
+// Pre-init workflow silently
+setTimeout(() => {
+  if (!workflowInit) {
+    initWorkflow();
+    workflowInit = true;
+  }
+}, 1000);
+</script>
+<div id="liveBackendPanel" style="
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  width: 320px;
+  background: rgba(12,18,25,0.96);
+  border: 1px solid #223344;
+  color: #e8f4ff;
+  padding: 16px;
+  z-index: 99999;
+  font-family: 'DM Mono', monospace;
+  box-shadow: 0 0 24px rgba(0,0,0,0.4);
+">
+  <div style="font-size: 11px; letter-spacing: 2px; color: #00d4ff; margin-bottom: 10px;">
+    LIVE BACKEND PANEL
+  </div>
+
+  <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+    <span>System</span>
+    <span id="live-system-status">Loading...</span>
+  </div>
+
+  <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+    <span>MT5 Bridge</span>
+    <span id="live-mt5-status">Loading...</span>
+  </div>
+
+  <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+    <span>Balance</span>
+    <span id="live-balance">Loading...</span>
+  </div>
+
+  <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+    <span>Equity</span>
+    <span id="live-equity">Loading...</span>
+  </div>
+
+  <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+    <span>Profit</span>
+    <span id="live-profit">Loading...</span>
+  </div>
+
+  <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+    <span>Last Update</span>
+    <span id="live-last-update">—</span>
+  </div>
+
+  <div style="margin-top:10px; font-size:10px; color:#7f9bb3;">
+    Backend: <span id="live-backend-url">127.0.0.1:8000</span>
+  </div>
+</div>
+
+<script>
+  const API_BASE = "http://127.0.0.1:8000";
+  const WS_URL = "ws://127.0.0.1:8000/ws/live";
+
+  function setText(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  }
+
+  function formatMoney(value, currency = "USD") {
+    if (typeof value !== "number") return value;
+    return `${currency} ${value.toFixed(2)}`;
+  }
+
+  async function fetchJSON(path) {
+    const res = await fetch(`${API_BASE}${path}`);
+    if (!res.ok) {
+      throw new Error(`Request failed: ${res.status}`);
+    }
+    return res.json();
+  }
+
+  async function loadLiveData() {
+    try {
+      const [systemSummary, accountSummary] = await Promise.all([
+        fetchJSON("/api/system/summary"),
+        fetchJSON("/api/account/summary")
+      ]);
+
+      setText("live-system-status", systemSummary.system_status);
+      setText("live-mt5-status", systemSummary.mt5_bridge_status);
+
+      setText("live-balance", formatMoney(accountSummary.balance, accountSummary.currency));
+      setText("live-equity", formatMoney(accountSummary.equity, accountSummary.currency));
+      setText("live-profit", formatMoney(accountSummary.profit, accountSummary.currency));
+
+      const time = new Date(accountSummary.timestamp).toLocaleTimeString();
+      setText("live-last-update", time);
+    } catch (err) {
+      console.error("Initial API load failed:", err);
+      setText("live-system-status", "ERROR");
+      setText("live-mt5-status", "ERROR");
+      setText("live-balance", "ERROR");
+      setText("live-equity", "ERROR");
+      setText("live-profit", "ERROR");
+    }
+  }
+
+  function connectLiveSocket() {
+    const socket = new WebSocket(WS_URL);
+
+    socket.onopen = () => {
+      console.log("WebSocket connected");
+
+      setInterval(() => {
+        if (socket.readyState === WebSocket.OPEN) {
+          socket.send("ping");
+        }
+      }, 15000);
+    };
+
+    socket.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+      console.log("WS message:", msg);
+
+      if (msg.type === "account_update") {
+        const data = msg.data;
+        setText("live-balance", formatMoney(data.balance, data.currency));
+        setText("live-equity", formatMoney(data.equity, data.currency));
+        setText("live-profit", formatMoney(data.profit, data.currency));
+
+        const time = new Date(msg.timestamp).toLocaleTimeString();
+        setText("live-last-update", time);
+      }
+    };
+
+    socket.onclose = () => {
+      console.log("WebSocket closed. Reconnecting in 3 seconds...");
+      setTimeout(connectLiveSocket, 3000);
+    };
+
+    socket.onerror = (err) => {
+      console.error("WebSocket error:", err);
+      socket.close();
+    };
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    loadLiveData();
+    connectLiveSocket();
+  });
+</script>
+
+</body>
+</html>
